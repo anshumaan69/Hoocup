@@ -1,0 +1,14 @@
+[2026-01-05T16:17:47.884Z] googleAuth called with code: Yes
+[2026-01-05T16:17:47.909Z] Attempting to exchange code for tokens...
+[2026-01-05T16:17:48.290Z] Tokens received successfully.
+[2026-01-05T16:17:48.290Z] Verifying ID token...
+[2026-01-05T16:17:48.366Z] ID Token verified. Email: anshumaan.1611@gmail.com
+[2026-01-05T16:17:48.421Z] User found: 695bde2a0f437637fb723a8e
+[2026-01-05T16:17:48.428Z] Response sent with 200 OK.
+[2026-01-05T16:25:04.379Z] googleAuth called with code: Yes
+[2026-01-05T16:25:04.380Z] Attempting to exchange code for tokens...
+[2026-01-05T16:25:04.687Z] Tokens received successfully.
+[2026-01-05T16:25:04.687Z] Verifying ID token...
+[2026-01-05T16:25:04.689Z] ID Token verified. Email: anshumaan.1611@gmail.com
+[2026-01-05T16:25:04.765Z] User found: 695bde2a0f437637fb723a8e
+[2026-01-05T16:25:04.769Z] Response sent with 200 OK.
