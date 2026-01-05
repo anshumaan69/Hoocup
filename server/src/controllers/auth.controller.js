@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 const client = new OAuth2Client(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    'http://localhost:3000/api/auth/callback/google'
+    process.env.CLIENT_URL + '/api/auth/callback/google'
 );
 
 let twilioClient;
@@ -42,6 +42,10 @@ exports.googleAuth = async (req, res) => {
         // Exchange code for tokens
         logDebug('Attempting to exchange code for tokens...');
         const clientUrl = process.env.CLIENT_URL ? process.env.CLIENT_URL.replace(/\/$/, '') : 'http://localhost:3000';
+        
+        console.log(`[DEBUG] Google Auth: Exchange Code. Redirect URI: ${clientUrl}/api/auth/callback/google`);
+        console.log(`[DEBUG] CLIENT_URL env var: ${process.env.CLIENT_URL}`);
+
         const { tokens } = await client.getToken({
             code,
             redirect_uri: `${clientUrl}/api/auth/callback/google`
@@ -92,7 +96,15 @@ exports.googleAuth = async (req, res) => {
         const errorMsg = JSON.stringify(error, Object.getOwnPropertyNames(error));
         logDebug(`ERROR in googleAuth: ${errorMsg}`);
         console.error('Google Auth Error Full Object:', errorMsg);
-        const errorMessage = error.response?.data?.error_description || error.response?.data?.error || error.message || 'Google authentication failed';
+        
+        // Improve error extraction
+        let errorMessage = 'Google authentication failed';
+        if (error.response && error.response.data) {
+             errorMessage = error.response.data.error_description || error.response.data.error || JSON.stringify(error.response.data);
+        } else if (error.message) {
+             errorMessage = error.message;
+        }
+        
         res.status(400).json({ message: errorMessage });
     }
 };
