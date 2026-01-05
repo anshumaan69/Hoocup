@@ -62,7 +62,6 @@ export async function GET(request: NextRequest) {
     
     if (setCookieHeader) {
         setCookieHeader.forEach(cookie => {
-            // Simple parsing to forward the cookie
            nextResponse.headers.append('Set-Cookie', cookie);
         });
     }

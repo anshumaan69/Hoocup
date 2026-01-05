@@ -43,7 +43,7 @@ exports.googleAuth = async (req, res) => {
         logDebug('Attempting to exchange code for tokens...');
         const { tokens } = await client.getToken({
             code,
-            redirect_uri: 'http://localhost:3000/api/auth/callback/google'
+            redirect_uri: `${process.env.CLIENT_URL}/api/auth/callback/google`
         });
         logDebug('Tokens received successfully.');
         
