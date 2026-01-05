@@ -14,7 +14,7 @@ export function LoginContent() {
     const login = useGoogleLogin({
         flow: 'auth-code',
         ux_mode: 'redirect',
-        redirect_uri: 'http://localhost:3000/api/auth/callback/google',
+        redirect_uri: typeof window !== 'undefined' ? `${window.location.origin}/api/auth/callback/google` : '',
         onError: () => alert('Google Login Failed'),
     });
 
