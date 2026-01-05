@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   try {
     // Exchange code for session at backend
     // Use 127.0.0.1 instead of localhost for server-side fetches to avoid IPv6 issues
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL?.replace('localhost', '127.0.0.1') || 'http://127.0.0.1:5000/api/auth';
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL;
     
     console.log(`[DEBUG] Google Callback: calling backend at ${backendUrl}/google`);
 
