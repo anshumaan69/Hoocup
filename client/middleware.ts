@@ -16,9 +16,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // If trying to access auth pages while logged in (optional check)
+  // If trying to access auth pages while logged in
   if ((pathname === '/login' || pathname === '/signup') && token) {
-      // Could redirect to home, but keeping flexible for now
+      return NextResponse.redirect(new URL('/home', request.url));
   }
 
   return NextResponse.next();

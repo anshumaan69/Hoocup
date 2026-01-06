@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
 import api from '../../services/api';
 import { useRouter } from 'next/navigation';
@@ -10,6 +10,13 @@ export function LoginContent() {
     const [phone, setPhone] = useState('');
     const [otp, setOtp] = useState('');
     const [showOtpInput, setShowOtpInput] = useState(false);
+
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            router.push('/home');
+        }
+    }, [router]);
 
     const login = useGoogleLogin({
         flow: 'auth-code',

@@ -16,14 +16,20 @@ export function SignupContent() {
     const [isOtpSent, setIsOtpSent] = useState(false);
 
     useEffect(() => {
-        const token = searchParams.get('token');
-        if (token) {
-            localStorage.setItem('token', token);
+        const tokenFromUrl = searchParams.get('token');
+        if (tokenFromUrl) {
+            localStorage.setItem('token', tokenFromUrl);
              // Optional: clean URL
              const newUrl = window.location.pathname + `?step=${initialStep}`; // Keep step param
              window.history.replaceState({}, '', newUrl);
+        } else {
+            // If no token in URL, check if we already have one
+            const storedToken = localStorage.getItem('token');
+            if (storedToken) {
+                router.push('/home');
+            }
         }
-    }, [searchParams, initialStep]);
+    }, [searchParams, initialStep, router]);
 
     const login = useGoogleLogin({
         flow: 'auth-code',
