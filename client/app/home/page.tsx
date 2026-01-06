@@ -12,7 +12,14 @@ function HomeContent() {
     useEffect(() => {
         // Just fetch user. Interceptor handles 401->Refresh->Retry or Redirect
         api.get('/me')
-            .then(res => setUser(res.data))
+            .then(res => {
+                const userData = res.data;
+                setUser(userData);
+                // Enforce Phone Verification
+                if (!userData.is_phone_verified) {
+                    router.push('/signup?step=2');
+                }
+            })
             .catch((err) => {
                 console.error('Failed to fetch user', err);
                 // No need to clear localStorage anymore

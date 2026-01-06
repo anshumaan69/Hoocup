@@ -160,27 +160,53 @@ exports.verifyOtp = async (req, res) => {
              const serviceSid = process.env.TWILIO_SERVICE_SID.trim();
              const check = await twilioClient.verify.v2.services(serviceSid)
                 .verificationChecks.create({ to: phone.trim(), code });
-            if (check.status === 'approved') isVerified = true;
+             if (check.status === 'approved') isVerified = true;
         }
 
         if (isVerified) {
-            // Find user logic (simplified for secure refactor)
-            // Note: Merging logic omitted for brevity in this strict refactor unless specifically requested to keep complex merging.
-            // Assuming simple login/registration for now to ensure security first.
-            
+            // Case 1: content login (User exists with this phone)
             let user = await User.findOne({ phone }).select('+refresh_token_hash');
-            if (!user) {
-                user = new User({ phone, auth_provider: 'local', is_phone_verified: true });
+            
+            if (user) {
+                // LOGIN FLOW
+                const { accessToken, refreshToken } = generateTokens(user._id);
+                user.refresh_token_hash = hashToken(refreshToken);
                 await user.save();
+                setCookies(res, accessToken, refreshToken);
+                return res.status(200).json({ success: true, user: { ...user.toObject(), refresh_token_hash: undefined } });
             }
 
-            const { accessToken, refreshToken } = generateTokens(user._id);
-            user.refresh_token_hash = hashToken(refreshToken);
-            await user.save();
+            // Case 2: Signup Step 2 (Linking Phone to Google Account)
+            // Check if user is currently logged in (Google Session)
+            const incomingToken = req.cookies.access_token;
+            if (incomingToken) {
+                try {
+                    const decoded = jwt.verify(incomingToken, process.env.JWT_SECRET);
+                    user = await User.findById(decoded.id);
+                    
+                    if (user) {
+                        // Link phone to existing Google user
+                        user.phone = phone;
+                        user.is_phone_verified = true;
+                        // user.refresh_token_hash = ... (Already set during Google login, but good to rotate)
+                         const { accessToken, refreshToken } = generateTokens(user._id);
+                         user.refresh_token_hash = hashToken(refreshToken);
+                        await user.save();
+                        
+                        setCookies(res, accessToken, refreshToken);
+                        return res.status(200).json({ success: true, user: { ...user.toObject(), refresh_token_hash: undefined } });
+                    }
+                } catch (e) {
+                    // Token invalid, proceed to error
+                }
+            }
 
-            setCookies(res, accessToken, refreshToken);
-            
-            return res.status(200).json({ success: true, user: { ...user.toObject(), refresh_token_hash: undefined } });
+            // Case 3: Unknown Phone & No Session -> REJECT
+            return res.status(400).json({ 
+                message: 'Account not found. Please signup with Google first.',
+                error: 'signup_required' 
+            });
+
         } else {
             return res.status(400).json({ message: 'Invalid OTP' });
         }
