@@ -171,8 +171,12 @@ function ProfileContent() {
                 {/* Details Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                     <div className="bg-zinc-800/50 p-4 rounded-lg">
-                        <span className="text-zinc-500 text-sm block mb-1">Email (Private)</span>
-                        <span className="text-lg blur-sm select-none">user@example.com</span>
+                        <span className="text-zinc-500 text-sm block mb-1">Email {isOwner ? '(Private)' : ''}</span>
+                        {isOwner ? (
+                             <span className="text-lg">{currentUser?.email || 'N/A'}</span>
+                        ) : (
+                             <span className="text-lg blur-sm select-none">Hidden</span>
+                        )}
                     </div>
                     <div className="bg-zinc-800/50 p-4 rounded-lg">
                          <span className="text-zinc-500 text-sm block mb-1">Date of Birth</span>

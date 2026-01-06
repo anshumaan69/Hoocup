@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import api from '../services/api';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Feed from '../components/Feed';
 
 function HomeContent() {
     const [user, setUser] = useState<any>(null);
@@ -41,26 +42,30 @@ function HomeContent() {
     }
 
     return (
-        <div className="flex min-h-screen flex-col items-center justify-center bg-black text-white p-8">
-            <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-blue-400 to-purple-600 text-transparent bg-clip-text">
-                Welcome to Hoocup
-            </h1>
-            <p className="text-xl text-zinc-400 mb-12">Connect, Share, and Grow.</p>
+        <div className="flex min-h-screen flex-col items-center bg-black text-white">
+            <header className="sticky top-0 z-50 w-full border-b border-zinc-800 bg-black/80 backdrop-blur-md p-4 flex justify-between items-center">
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 text-transparent bg-clip-text">
+                    Hoocup
+                </h1>
+                 <div className="flex gap-4">
+                    <button 
+                         onClick={() => router.push(`/${user.username}`)}
+                         className="text-sm font-semibold text-zinc-300 hover:text-white transition"
+                     >
+                         My Profile
+                     </button>
+                    <button 
+                        onClick={handleLogout}
+                        className="text-sm font-semibold text-red-500 hover:text-red-400 transition"
+                    >
+                        Logout
+                    </button>
+                </div>
+            </header>
 
-            <div className="flex gap-6">
-                <button 
-                    onClick={() => router.push(`/${user.username}`)}
-                    className="px-8 py-4 bg-white text-black font-bold rounded-full hover:bg-zinc-200 transition-transform hover:scale-105"
-                >
-                    Go to My Profile
-                </button>
-                <button 
-                    onClick={handleLogout}
-                    className="px-8 py-4 bg-zinc-800 text-white font-bold rounded-full hover:bg-zinc-700 transition"
-                >
-                    Logout
-                </button>
-            </div>
+            <main className="w-full max-w-2xl p-4">
+                 <Feed />
+            </main>
         </div>
     );
 }
