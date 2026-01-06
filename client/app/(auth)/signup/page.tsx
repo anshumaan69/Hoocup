@@ -15,7 +15,18 @@ export function SignupContent() {
     const [otp, setOtp] = useState('');
     const [isOtpSent, setIsOtpSent] = useState(false);
 
-    // Removed localStorage checks. Middleware handles redirect.
+    // Effect: Check if already logged in (meaning we are here for Step 2)
+    useEffect(() => {
+        api.get('/me')
+            .then(() => {
+                // If we can fetch user, we are logged in.
+                // If we are here, it likely means phone is unverified.
+                setStep(2); 
+            })
+            .catch(() => {
+                // Not logged in, stay on Step 1
+            });
+    }, []);
 
     const login = useGoogleLogin({
         flow: 'auth-code',

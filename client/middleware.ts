@@ -21,7 +21,8 @@ export function middleware(request: NextRequest) {
   }
 
   // If trying to access auth pages while logged in
-  if ((pathname === '/login' || pathname === '/signup') && token) {
+  // We allow /signup because unverified users (who have a cookie) might be redirected there to complete Step 2.
+  if (pathname === '/login' && token) {
       return NextResponse.redirect(new URL('/home', request.url));
   }
 
