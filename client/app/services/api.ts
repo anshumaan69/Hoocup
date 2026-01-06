@@ -44,7 +44,7 @@ api.interceptors.response.use(
                     /* Ignore logout error */ 
                 }
                 
-                if (typeof window !== 'undefined') {
+                if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
                     window.location.href = '/login'; 
                 }
                 return Promise.reject(refreshError);

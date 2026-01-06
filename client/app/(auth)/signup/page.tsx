@@ -15,18 +15,18 @@ export function SignupContent() {
     const [otp, setOtp] = useState('');
     const [isOtpSent, setIsOtpSent] = useState(false);
 
-    // Effect: Check if already logged in (meaning we are here for Step 2)
+    // Check if we are in Step 2 (Phone Verification) context
     useEffect(() => {
+        // We only check this to verify if we should jump to Step 2
+        // If the user is fully authenticated (profile complete), Middleware would have redirected to /home.
         api.get('/me')
             .then(() => {
-                // If we can fetch user, we are logged in.
-                // If we are here, it likely means phone is unverified.
                 setStep(2); 
             })
             .catch(() => {
-                // Not logged in, stay on Step 1
+                // Not logged in (or token invalid), so definitely Step 1
             });
-    }, [router]);
+    }, []);
 
     const login = useGoogleLogin({
         flow: 'auth-code',

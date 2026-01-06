@@ -29,6 +29,21 @@ export function RegisterDetailsContent() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Client-side Age Validation
+        const birthDate = new Date(formData.dob);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+
+        if (age < 10) {
+            alert('You must be at least 10 years old.');
+            return;
+        }
+
         try {
             await api.post('/register-details', formData);
             router.push('/home');

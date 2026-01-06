@@ -31,7 +31,8 @@
     - **Root Directory**: Select requests `client`.
     - **Environment Variables**:
       - Name: `NEXT_PUBLIC_API_URL`
-      - Value: `https://hoocup-api.onrender.com/api/auth` (The URL from Step 3).
+      - Value: `https://hoocup-api.onrender.com/api/auth` (Must include `/api/auth` at the end).
+      - *Note: If `CLIENT_URL` on Render is set to your Vercel URL, Google Login will work automatically without manual redirect URI matching.*
 4.  Click **Deploy**.
 
 ## 5. Final Setup

@@ -18,11 +18,21 @@ export async function GET(request: NextRequest) {
   try {
     // Exchange code for session at backend
     // Use 127.0.0.1 instead of localhost for server-side fetches to avoid IPv6 issues
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL;
+    // Fallback for robust localhost support if env is missing
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000/api/auth';
     
-    console.log(`[DEBUG] Google Callback: calling backend at ${backendUrl}/google`);
+    // Dynamically determine the redirect_uri that was used by the client
+    // We assume the callback route matches the structure /api/auth/callback/google
+    const origin = new URL(request.url).origin;
+    const redirectUri = `${origin}/api/auth/callback/google`;
 
-    const response = await axios.post(`${backendUrl}/google`, { code }, {
+    console.log(`[DEBUG] Google Callback: calling backend at ${backendUrl}/google`);
+    console.log(`[DEBUG] Using redirect_uri: ${redirectUri}`);
+
+    const response = await axios.post(`${backendUrl}/google`, { 
+        code,
+        redirect_uri: redirectUri 
+    }, {
         headers: { 'Content-Type': 'application/json' },
         withCredentials: true // Important to receive cookies
     });

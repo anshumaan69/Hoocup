@@ -11,19 +11,8 @@ export function LoginContent() {
     const [otp, setOtp] = useState('');
     const [showOtpInput, setShowOtpInput] = useState(false);
 
-    // Check if already logged in
-    useEffect(() => {
-        console.log('Checking auth status...');
-        api.get('/me')
-            .then((res) => {
-                console.log('Auth check success, redirecting...', res.data);
-                router.push('/home'); // Already authenticated -> Go Home
-            })
-            .catch((err) => {
-                console.log('Auth check failed (User needs to login):', err);
-                // Not logged in, show form
-            });
-    }, [router]);
+    // Middleware handles auth status checks (redirects to /home if logged in).
+    // No need for client-side check to prevent loops.
 
     const login = useGoogleLogin({
         flow: 'auth-code',

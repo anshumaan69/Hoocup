@@ -72,13 +72,15 @@ const clearCookies = (res) => {
 
 // Google Auth
 exports.googleAuth = async (req, res) => {
-    const { code } = req.body; 
+    const { code, redirect_uri } = req.body; 
     try {
+        // Use provided redirect_uri or fallback to env var
         const clientUrl = process.env.CLIENT_URL ? process.env.CLIENT_URL.replace(/\/$/, '') : 'http://localhost:3000';
+        const finalRedirectUri = redirect_uri || `${clientUrl}/api/auth/callback/google`;
         
         const { tokens } = await client.getToken({
             code,
-            redirect_uri: `${clientUrl}/api/auth/callback/google`
+            redirect_uri: finalRedirectUri
         });
         
         client.setCredentials(tokens);
@@ -262,6 +264,20 @@ exports.refreshToken = async (req, res) => {
 
 exports.registerDetails = async (req, res) => {
     const { username, first_name, last_name, dob } = req.body;
+    
+    // Server-side Age Validation
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+
+    if (age < 10) {
+        return res.status(400).json({ message: 'You must be at least 10 years old to register.' });
+    }
+
     try {
         const user = await User.findById(req.user.id);
         if (!user) return res.status(404).json({ message: 'User not found' });
