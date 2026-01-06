@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 const client = new OAuth2Client(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    process.env.CALLBACK_URL + '/api/auth/callback/google'
+    process.env.CALL + '/api/auth/callback/google'
 );
 
 let twilioClient;
