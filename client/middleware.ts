@@ -9,7 +9,9 @@ export function middleware(request: NextRequest) {
       console.log(`[MIDDLEWARE] Path: ${pathname}, Token present: ${!!token}`);
   }
 
-  const protectedPaths = ['/home', '/dashboard', '/register-details'];
+  // We remove '/home' and '/register-details' from here because we want to allow 
+  // client-side auth checks (localStorage) to take over if cookies fail.
+  const protectedPaths = ['/dashboard'];
   
   // If trying to access protected path without token
   if (protectedPaths.some(path => pathname.startsWith(path)) && !token) {
