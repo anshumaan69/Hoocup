@@ -21,10 +21,12 @@ export function middleware(request: NextRequest) {
   }
 
   // If trying to access auth pages while logged in
-  // We allow /signup because unverified users (who have a cookie) might be redirected there to complete Step 2.
-  if (pathname === '/login' && token) {
-      return NextResponse.redirect(new URL('/home', request.url));
-  }
+  // We allow access to login/signup even if token exists. 
+  // This prevents redirect loops if the token is present but invalid (server returns 401).
+  // The user can simply re-login to overwrite the bad cookies.
+  // if (pathname === '/login' && token) {
+  //     return NextResponse.redirect(new URL('/home', request.url));
+  // }
 
   return NextResponse.next();
 }

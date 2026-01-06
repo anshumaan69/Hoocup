@@ -39,7 +39,13 @@ api.interceptors.response.use(
                 // Retry original request (cookies will be automatically attached)
                 return api(originalRequest);
             } catch (refreshError) {
-                // Refresh failed - redirect to login
+                // Refresh failed - try to logout to clear cookies, then redirect
+                try {
+                    await api.post('/logout'); 
+                } catch (e) { 
+                    /* Ignore logout error */ 
+                }
+                
                 if (typeof window !== 'undefined') {
                     window.location.href = '/login'; 
                 }
