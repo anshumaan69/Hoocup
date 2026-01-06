@@ -35,7 +35,7 @@ api.interceptors.response.use(
             originalRequest._retry = true;
             try {
                 // Attempt refresh
-                await api.post('/auth/refresh');
+                await api.post('/refresh');
                 // Retry original request (cookies will be automatically attached)
                 return api(originalRequest);
             } catch (refreshError) {

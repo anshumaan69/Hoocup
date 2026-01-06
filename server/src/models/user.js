@@ -28,6 +28,7 @@ const userSchema = new mongoose.Schema({
     refresh_token_hash: {
         type: String,
         select: false, // Do not return by default
+        index: true, // Optimized lookup for rotation
     },
     username: {
         type: String,
