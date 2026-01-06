@@ -49,7 +49,7 @@ const setCookies = (res, accessToken, refreshToken) => {
         secure: isProd,
         sameSite: isProd ? 'none' : 'lax',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        path: '/api/auth/refresh' // Restrict path for security
+        path: '/' // Relaxed path for reliability
     });
 };
 
@@ -63,7 +63,7 @@ const clearCookies = (res) => {
     };
 
     res.clearCookie('access_token', cookieOptions);
-    res.clearCookie('refresh_token', { ...cookieOptions, path: '/api/auth/refresh' });
+    res.clearCookie('refresh_token', cookieOptions);
     res.clearCookie('csrf_token', { ...cookieOptions, httpOnly: false }); 
     res.clearCookie('token'); // Clear legacy cookie just in case
 };
