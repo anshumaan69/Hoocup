@@ -136,7 +136,11 @@ exports.sendOtp = async (req, res) => {
         }
 
         // Check for duplicate phone number if user is logged in (linking phase)
-        const tokenFromCookie = req.cookies.token;
+        let tokenFromCookie = req.cookies.token;
+        if (!tokenFromCookie && req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+             tokenFromCookie = req.headers.authorization.split(' ')[1];
+        }
+
         if (tokenFromCookie) {
              try {
                 const decoded = jwt.verify(tokenFromCookie, process.env.JWT_SECRET);
@@ -206,7 +210,11 @@ exports.verifyOtp = async (req, res) => {
         if (isVerified) {
             let currentUser;
             // 1. Get Logged In User (e.g. Google User)
-            const tokenFromCookie = req.cookies.token;
+            let tokenFromCookie = req.cookies.token;
+            if (!tokenFromCookie && req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+                tokenFromCookie = req.headers.authorization.split(' ')[1];
+            }
+
             if (tokenFromCookie) {
                 try {
                     const decoded = jwt.verify(tokenFromCookie, process.env.JWT_SECRET);
