@@ -279,7 +279,11 @@ exports.registerDetails = async (req, res) => {
         if (error.code === 11000) {
             return res.status(400).json({ message: 'Username already taken' });
         }
-        res.status(500).json({ message: error.message || 'Failed to update profile' });
+        res.status(500).json({ 
+            message: 'Failed to update profile', 
+            error: error.toString(),
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 };
 

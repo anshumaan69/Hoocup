@@ -34,8 +34,11 @@ export function RegisterDetailsContent() {
             router.push('/home');
         } catch (error: any) {
             console.error('Registration failed', error);
-            const msg = error.response?.data?.message || 'Failed to update details';
-            alert(msg);
+            console.error('Registration failed', error);
+            const data = error.response?.data || {};
+            const msg = data.message || 'Failed to update details';
+            const debugInfo = data.error ? `\nError: ${data.error}` : '';
+            alert(`${msg}${debugInfo}`);
         }
     };
 
