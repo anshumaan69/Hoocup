@@ -35,6 +35,11 @@ const userSchema = new mongoose.Schema({
         unique: true,
         sparse: true,
     },
+    bio: {
+        type: String,
+        maxLength: 150,
+        default: '',
+    },
     first_name: {
         type: String,
     },

@@ -11,7 +11,8 @@ export function RegisterDetailsContent() {
         first_name: '',
         last_name: '',
         dob: '',
-        username: ''
+        username: '',
+        bio: ''
     });
 
     const [avatar, setAvatar] = useState<File | null>(null);
@@ -127,6 +128,7 @@ export function RegisterDetailsContent() {
                  first_name: formData.first_name,
                  last_name: formData.last_name,
                  dob: formData.dob,
+                 bio: formData.bio,
                  avatar: avatarUrl
              });
              router.push('/home');
@@ -207,6 +209,18 @@ export function RegisterDetailsContent() {
                                 Generate
                             </button>
                         </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium mb-1 text-zinc-300">Bio <span className="text-zinc-500">(Optional)</span></label>
+                         <textarea 
+                            name="bio"
+                            className="w-full p-2 rounded bg-zinc-800 border border-zinc-700 focus:outline-none focus:border-blue-500 text-white h-20 resize-none"
+                            placeholder="Tell us a little about yourself..."
+                            value={formData.bio}
+                            onChange={(e) => handleChange(e as any)}
+                            maxLength={150}
+                        />
                     </div>
 
                     <div>

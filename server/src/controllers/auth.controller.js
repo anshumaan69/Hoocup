@@ -51,6 +51,15 @@ const setCookies = (res, accessToken, refreshToken) => {
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         path: '/' // Relaxed path for reliability
     });
+
+    // CSRF Token (Readable by client)
+    const csrfToken = crypto.randomBytes(32).toString('hex');
+    res.cookie('csrf_token', csrfToken, {
+        httpOnly: false, // Must be readable by client JS
+        secure: isProd,
+        sameSite: isProd ? 'none' : 'lax',
+        path: '/',
+    });
 };
 
 const clearCookies = (res) => {
@@ -268,7 +277,7 @@ exports.refreshToken = async (req, res) => {
 };
 
 exports.registerDetails = async (req, res) => {
-    const { username, first_name, last_name, dob, avatar } = req.body;
+    const { username, first_name, last_name, dob, avatar, bio } = req.body;
     
     // Server-side Age Validation
     const birthDate = new Date(dob);
@@ -292,6 +301,7 @@ exports.registerDetails = async (req, res) => {
         user.last_name = last_name;
         user.dob = dob;
         if (avatar) user.avatar = avatar;
+        if (bio !== undefined) user.bio = bio;
         user.is_profile_complete = true;
 
         await user.save();
@@ -299,7 +309,9 @@ exports.registerDetails = async (req, res) => {
     } catch (error) {
         console.error('Register Details Error:', error);
         if (error.code === 11000) {
-            return res.status(400).json({ message: 'Username already taken' });
+            const field = Object.keys(error.keyPattern)[0];
+            const readableField = field.charAt(0).toUpperCase() + field.slice(1);
+            return res.status(400).json({ message: `${readableField} already exists. Please choose another.` });
         }
         res.status(500).json({ 
             message: 'Failed to update profile', 

@@ -18,6 +18,7 @@ function ProfileContent() {
         last_name: '',
         username: '',
         dob: '',
+        bio: '',
     });
     const [avatar, setAvatar] = useState<File | null>(null);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -34,6 +35,7 @@ function ProfileContent() {
                     last_name: res.data.last_name || '',
                     username: res.data.username || '',
                     dob: res.data.dob ? res.data.dob.split('T')[0] : '',
+                    bio: res.data.bio || '',
                  });
              } catch (error) {
                  console.error('Failed to fetch profile', error);
@@ -166,6 +168,19 @@ function ProfileContent() {
                      )}
                      
                      <p className="text-zinc-400">@{profile.username}</p>
+                     
+                     {isEditing ? (
+                         <textarea 
+                            name="bio" 
+                            value={formData.bio} 
+                            onChange={(e) => handleChange(e as any)} 
+                            className="bg-zinc-800 p-2 rounded w-full mt-4 text-center h-20 resize-none" 
+                            placeholder="Bio..."
+                            maxLength={150} 
+                        />
+                     ) : (
+                        <p className="text-zinc-300 mt-2 text-center max-w-sm">{profile.bio}</p>
+                     )}
                 </div>
 
                 {/* Details Grid */}

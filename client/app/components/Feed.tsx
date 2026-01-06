@@ -244,9 +244,41 @@ const POSTS: Post[] = [
 ];
 
 const Feed = () => {
+    const [posts, setPosts] = useState<Post[]>(POSTS.slice(0, 10)); // Initial 10
+    const [page, setPage] = useState(1);
+    const [loading, setLoading] = useState(false);
+    const loaderRef = React.useRef(null);
+
+    const loadMore = React.useCallback(() => {
+        if (loading) return;
+        setLoading(true);
+        
+        // Simulate network delay
+        setTimeout(() => {
+            const nextPosts = POSTS.slice(0, 10).map(p => ({ ...p, id: p.id + (page * 100), id_original: p.id })); // Generate unique IDs
+            setPosts(prev => [...prev, ...nextPosts]);
+            setPage(prev => prev + 1);
+            setLoading(false);
+        }, 1000);
+    }, [page, loading]);
+
+    React.useEffect(() => {
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                loadMore();
+            }
+        }, { threshold: 1.0 });
+
+        if (loaderRef.current) {
+            observer.observe(loaderRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [loadMore]);
+
     return (
         <div className="flex flex-col gap-8 w-full max-w-xl mx-auto pb-10">
-            {POSTS.map((post) => (
+            {posts.map((post) => (
                 <article key={post.id} className="flex flex-col bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden">
                     {/* Header */}
                     <div className="flex items-center gap-3 p-3">
@@ -284,7 +316,7 @@ const Feed = () => {
 
                     {/* Actions */}
                     <div className="flex flex-col p-4 gap-2">
-                        <div className="flex gap-4 text-white">
+                         <div className="flex gap-4 text-white">
                              {/* Heart Icon */}
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 cursor-pointer hover:text-red-500 transition">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
@@ -308,6 +340,11 @@ const Feed = () => {
                     </div>
                 </article>
             ))}
+            
+            {/* Loader */}
+            <div ref={loaderRef} className="flex justify-center p-4">
+                {loading && <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>}
+            </div>
         </div>
     );
 };
