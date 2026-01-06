@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 const client = new OAuth2Client(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    process.env.CALL + '/api/auth/callback/google'
+    process.env.CALLBACK_URL + '/api/auth/callback/google'
 );
 
 let twilioClient;
@@ -146,7 +146,7 @@ exports.sendOtp = async (req, res) => {
                 const existingPhoneUser = await User.findOne({ phone });
                 
                 if (existingPhoneUser && existingPhoneUser._id.toString() !== currentUser._id.toString()) {
-                    return res.status(400).json({ message: 'Phone number already in use by another account' });
+                    return res.status(400).json ({ message: 'Phone number already in use by another account' });
                 }
              } catch (err) {
                  // Token invalid, treat as guest/login attempt (allow OTP)
