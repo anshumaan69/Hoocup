@@ -26,7 +26,7 @@ export function SignupContent() {
             .catch(() => {
                 // Not logged in, stay on Step 1
             });
-    }, []);
+    }, [router]);
 
     const login = useGoogleLogin({
         flow: 'auth-code',

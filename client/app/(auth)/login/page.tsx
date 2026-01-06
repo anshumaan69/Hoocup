@@ -11,9 +11,16 @@ export function LoginContent() {
     const [otp, setOtp] = useState('');
     const [showOtpInput, setShowOtpInput] = useState(false);
 
-    // Note: We no longer check localStorage. 
-    // Middleware handles redirection if cookies are present.
-    // Or we rely on API to succeed/fail.
+    // Check if already logged in
+    useEffect(() => {
+        api.get('/me')
+            .then(() => {
+                router.push('/home'); // Already authenticated -> Go Home
+            })
+            .catch(() => {
+                // Not logged in, show form
+            });
+    }, [router]);
 
     const login = useGoogleLogin({
         flow: 'auth-code',
