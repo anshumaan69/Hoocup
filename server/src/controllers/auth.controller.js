@@ -89,7 +89,7 @@ exports.googleAuth = async (req, res) => {
             audience: process.env.GOOGLE_CLIENT_ID,
         });
         const payload = ticket.getPayload();
-        const { email, given_name, family_name } = payload;
+        const { email, given_name, family_name, picture } = payload;
 
         let user = await User.findOne({ email }).select('+refresh_token_hash'); // Explicitly select for internal use
 
@@ -98,9 +98,14 @@ exports.googleAuth = async (req, res) => {
                 email,
                 first_name: given_name,
                 last_name: family_name,
+                avatar: picture, // Save Google Avatar
                 auth_provider: 'google',
             });
             await user.save();
+        } else if (!user.avatar) {
+             // Optional: Backfill avatar if missing
+             user.avatar = picture;
+             await user.save();
         }
 
         const { accessToken, refreshToken } = generateTokens(user._id);

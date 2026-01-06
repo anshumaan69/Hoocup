@@ -16,10 +16,31 @@ export function RegisterDetailsContent() {
 
     const [avatar, setAvatar] = useState<File | null>(null);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+    const [existingAvatarUrl, setExistingAvatarUrl] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
 
-    // No manual token check needed
-    // Middleware and cookies handle auth state
+    // Fetch existing user data (pre-fill from Google)
+    useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                const { data } = await api.get('/me');
+                setFormData(prev => ({
+                    ...prev,
+                    first_name: data.first_name || '',
+                    last_name: data.last_name || '',
+                    // username: data.username // Don't pre-fill username if we want them to choose a unique one, or do? 
+                    // Usually username is not set yet if they are here.
+                }));
+                if (data.avatar) {
+                    setAvatarPreview(data.avatar);
+                    setExistingAvatarUrl(data.avatar);
+                }
+            } catch (error) {
+                console.error('Failed to fetch user data for pre-fill', error);
+            }
+        };
+        fetchUserData();
+    }, []);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -54,26 +75,24 @@ export function RegisterDetailsContent() {
         setFormData({ ...formData, username: `${base}${random}` });
     };
 
-    async function convertToWebP(file: File): Promise<Blob> {
+    async function compressImage(file: File): Promise<Blob> {
       const bitmap = await createImageBitmap(file);
       const canvas = document.createElement("canvas");
       canvas.width = 512;
       canvas.height = 512;
-    
       const ctx = canvas.getContext("2d")!;
+      // Draw white background mainly for transparent PNGs converted to WebP
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, 512, 512);
       ctx.drawImage(bitmap, 0, 0, 512, 512);
-    
       return new Promise((resolve) => {
-        canvas.toBlob(
-          (blob) => resolve(blob!),
-          "image/webp",
-          0.8
-        );
+        canvas.toBlob((blob) => resolve(blob!), "image/webp", 0.8);
       });
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setUploading(true);
 
         // Client-side Age Validation
         const birthDate = new Date(formData.dob);
@@ -85,47 +104,37 @@ export function RegisterDetailsContent() {
         }
 
         if (age < 10) {
-            alert('You must be at least 10 years old.');
+            alert('You must be at least 10 years old to register.');
+            setUploading(false);
             return;
         }
 
-        setUploading(true);
         try {
-            let avatarUrl = null;
-            if (avatar) {
-                // 1. Convert to WebP
-                const webpImage = await convertToWebP(avatar);
+             let avatarUrl = existingAvatarUrl || null;
+             if (avatar) {
+                 const compressedBlob = await compressImage(avatar);
+                 const formDataUpload = new FormData();
+                 formDataUpload.append("avatar", compressedBlob);
+                 
+                 const res = await api.post('/avatar', formDataUpload, {
+                     headers: { 'Content-Type': 'multipart/form-data' }
+                 });
+                 avatarUrl = res.data.avatar;
+             }
 
-                // 2. Get Signed URL
-                const { data } = await api.get('/avatar/upload-url');
-                const { uploadUrl, filePath } = data;
-
-                // 3. Upload to GCS
-                await fetch(uploadUrl, {
-                    method: 'PUT',
-                    body: webpImage,
-                    headers: {
-                        'Content-Type': 'image/webp'
-                    }
-                });
-                
-                // 4. Save Avatar using dedicated endpoint (as requested)
-                await api.post("/avatar/save", { filePath });
-
-                // Construct URL for register details fallback (though saveAvatar updates the user too)
-                avatarUrl = `https://storage.googleapis.com/${process.env.NEXT_PUBLIC_GCP_BUCKET_NAME}/${filePath}`;
-            }
-
-            // Still call register-details to update text fields
-            // We pass avatarUrl just in case, or if the backend controller logic needs it contextually
-            await api.post('/register-details', { ...formData, avatar: avatarUrl });
-            router.push('/home');
+             await api.post('/register-details', { 
+                 username: formData.username,
+                 first_name: formData.first_name,
+                 last_name: formData.last_name,
+                 dob: formData.dob,
+                 avatar: avatarUrl
+             });
+             router.push('/home');
         } catch (error: any) {
-            console.error('Registration failed', error);
-            const data = error.response?.data || {};
-            const msg = data.message || 'Failed to update details';
-            const debugInfo = data.error ? `\nError: ${data.error}` : '';
-            alert(`${msg}${debugInfo}`);
+             console.error('Registration failed', error);
+             const data = error.response?.data || {};
+             const msg = data.message || 'Failed to update details';
+             alert(msg);
         } finally {
             setUploading(false);
         }

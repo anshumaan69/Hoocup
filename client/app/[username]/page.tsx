@@ -75,12 +75,15 @@ function ProfileContent() {
         setAvatarPreview(URL.createObjectURL(file));
     };
 
-    async function convertToWebP(file: File): Promise<Blob> {
+    async function compressImage(file: File): Promise<Blob> {
       const bitmap = await createImageBitmap(file);
       const canvas = document.createElement("canvas");
       canvas.width = 512;
       canvas.height = 512;
       const ctx = canvas.getContext("2d")!;
+      // Draw white background mainly for transparent PNGs converted to WebP (optional but good)
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, 512, 512);
       ctx.drawImage(bitmap, 0, 0, 512, 512);
       return new Promise((resolve) => {
         canvas.toBlob((blob) => resolve(blob!), "image/webp", 0.8);
@@ -92,16 +95,27 @@ function ProfileContent() {
         setUploading(true);
         try {
             let avatarUrl = profile.avatar;
+
+            // 1. Upload Avatar if changed
             if (avatar) {
-                const webpImage = await convertToWebP(avatar);
-                const { data } = await api.get('/avatar/upload-url');
-                const { uploadUrl, filePath } = data;
-                await fetch(uploadUrl, { method: 'PUT', body: webpImage, headers: { 'Content-Type': 'image/webp' } });
-                await api.post("/avatar/save", { filePath });
-                avatarUrl = `https://storage.googleapis.com/${process.env.NEXT_PUBLIC_GCP_BUCKET_NAME}/${filePath}`;
+                const compressedBlob = await compressImage(avatar);
+                const formData = new FormData();
+                formData.append("avatar", compressedBlob);
+
+                // Use fetch directly for FormData to avoid Content-Type header issues with axios wrappers if not handled automatically
+                // But our api client sets Content-Type: application/json by default.
+                // It's safer to use api.post with Content-Type: multipart/form-data OR just let axios handle it by passing FormData.
+                // However, our api interceptor might force JSON.
+                // Let's use axios instance 'api' but override headers.
+                
+                const res = await api.post('/avatar', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' } 
+                });
+                
+                avatarUrl = res.data.avatar; 
             }
 
-            // Update details
+            // 2. Update other details
             const res = await api.post('/register-details', { ...formData, avatar: avatarUrl });
             setProfile(res.data.user);
             setIsEditing(false);

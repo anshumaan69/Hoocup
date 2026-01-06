@@ -21,7 +21,7 @@ export function middleware(request: NextRequest) {
   }
 
   // If trying to access auth pages while logged in
-  if ((pathname === '/login' || pathname === '/signup') && token) {
+  if (pathname === '/login' && token) {
       return NextResponse.redirect(new URL('/home', request.url));
   }
 

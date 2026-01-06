@@ -17,12 +17,33 @@
 2.  Connect your GitHub repo.
 3.  **Settings**:
     - **Root Directory**: `server`
-    - **Build Command**: `npm install`
-    - **Start Command**: `node src/index.js`
-4.  **Environment Variables**:
-    - Add `MONGO_URI`, `JWT_SECRET`, `GOOGLE_CLIENT_ID`, etc. (Copy from your `.env`).
-    - Add `GCP_PROJECT_ID`, `GCP_BUCKET_NAME`, and `GCP_SERVICE_ACCOUNT` (Paste the JSON string carefully).
-    - Set `CLIENT_URL` to your future frontend URL (e.g. `https://hoocup.vercel.app`).
+
+### 2. Environment Variables (Render)
+Add the following Environment Variables in the **Environment** tab:
+
+| Key | Value | Description |
+| :--- | :--- | :--- |
+| `NODE_ENV` | `production` | Production mode |
+| `PORT` | `5000` | Server Port |
+| `MONGO_URI` | `...` | Your MongoDB Connection String |
+| `JWT_SECRET` | `...` | Strong random secret |
+| `CLIENT_URL` | `https://your-frontend.vercel.app` | URL of your frontend |
+| `GOOGLE_CLIENT_ID` | `...` | From Google Cloud Console |
+| `GOOGLE_CLIENT_SECRET` | `...` | From Google Cloud Console |
+| `CALLBACK_URL` | `https://your-backend.onrender.com` | Your backend URL on Render |
+| `TWILIO_ACCOUNT_SID` | `...` | (Optional) Twilio SID |
+| `TWILIO_AUTH_TOKEN` | `...` | (Optional) Twilio Token |
+| `TWILIO_SERVICE_SID` | `...` | (Optional) Twilio Service SID |
+| `CLOUDINARY_CLOUD_NAME` | `...` | From Cloudinary Dashboard |
+| `CLOUDINARY_API_KEY` | `...` | From Cloudinary Dashboard |
+| `CLOUDINARY_API_SECRET` | `...` | From Cloudinary Dashboard |
+
+> **Note:** The `GCP_` variables are no longer needed as we switched to Cloudinary.
+
+### 3. Build Command
+Render usually detects `Node.js`.
+- **Build Command:** `npm install`
+- **Start Command:** `node src/index.js`
 5.  Click **Deploy**. Copy the URL Render gives you (e.g. `https://hoocup-api.onrender.com`).
 
 ## 4. Deploy Frontend (Vercel)
