@@ -35,6 +35,11 @@ export function LoginContent() {
         try {
             const res = await api.post('/verify-otp', { phone, code: otp });
             if (res.status === 200) {
+                 // Save token from response if available (Cookie backup)
+                 if (res.data.token) {
+                    localStorage.setItem('token', res.data.token);
+                }
+
                 if (res.data.user && res.data.user.is_profile_complete) {
                      router.push('/home'); // Or dashboard
                 } else {

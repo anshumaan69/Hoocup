@@ -58,6 +58,11 @@ export async function GET(request: NextRequest) {
         console.log('[DEBUG] Default redirect (should verify why we are here if expected to go elsewhere)');
     }
 
+    // Append token to URL so client can store it (Fallback for cookies)
+    if (token) {
+        redirectUrl.searchParams.set('token', token);
+    }
+
     const nextResponse = NextResponse.redirect(redirectUrl);
     
     if (setCookieHeader) {

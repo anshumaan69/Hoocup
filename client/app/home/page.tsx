@@ -1,25 +1,35 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import api from '../services/api';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function HomePage() {
+function HomeContent() {
     const [user, setUser] = useState<any>(null);
     const router = useRouter();
+    const searchParams = useSearchParams();
 
     useEffect(() => {
+        const token = searchParams.get('token');
+        if (token) {
+            localStorage.setItem('token', token);
+             const newUrl = window.location.pathname;
+             window.history.replaceState({}, '', newUrl);
+        }
+
         api.get('/me')
             .then(res => setUser(res.data))
             .catch((err) => {
                 console.error('Failed to fetch user', err);
+                // Only redirect if valid token wasn't just set or if call failed despite it
                 router.push('/login');
             });
-    }, [router]);
+    }, [router, searchParams]);
 
     const handleLogout = async () => {
         try {
             await api.post('/logout');
+            localStorage.removeItem('token'); // Clear token
             router.push('/');
         } catch (error) {
             console.error('Logout failed', error);
@@ -73,4 +83,12 @@ export default function HomePage() {
             </div>
         </div>
     );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HomeContent />
+    </Suspense>
+  );
 }

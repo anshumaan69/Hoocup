@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
 import api from '../../services/api';
 import { useSearchParams } from 'next/navigation';
@@ -14,6 +14,16 @@ export function SignupContent() {
     const [phone, setPhone] = useState('');
     const [otp, setOtp] = useState('');
     const [isOtpSent, setIsOtpSent] = useState(false);
+
+    useEffect(() => {
+        const token = searchParams.get('token');
+        if (token) {
+            localStorage.setItem('token', token);
+             // Optional: clean URL
+             const newUrl = window.location.pathname + `?step=${initialStep}`; // Keep step param
+             window.history.replaceState({}, '', newUrl);
+        }
+    }, [searchParams, initialStep]);
 
     const login = useGoogleLogin({
         flow: 'auth-code',
@@ -39,6 +49,11 @@ export function SignupContent() {
         try {
             const res = await api.post('/verify-otp', { phone, code: otp });
             if (res.status === 200) {
+                // Save token from response if available (Cookie backup)
+                if (res.data.token) {
+                    localStorage.setItem('token', res.data.token);
+                }
+
                 if (res.data.user && res.data.user.is_profile_complete) {
                      router.push('/home'); // Or dashboard
                 } else {
