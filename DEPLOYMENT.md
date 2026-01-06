@@ -21,6 +21,7 @@
     - **Start Command**: `node src/index.js`
 4.  **Environment Variables**:
     - Add `MONGO_URI`, `JWT_SECRET`, `GOOGLE_CLIENT_ID`, etc. (Copy from your `.env`).
+    - Add `GCP_PROJECT_ID`, `GCP_BUCKET_NAME`, and `GCP_SERVICE_ACCOUNT` (Paste the JSON string carefully).
     - Set `CLIENT_URL` to your future frontend URL (e.g. `https://hoocup.vercel.app`).
 5.  Click **Deploy**. Copy the URL Render gives you (e.g. `https://hoocup-api.onrender.com`).
 
@@ -32,6 +33,8 @@
     - **Environment Variables**:
       - Name: `NEXT_PUBLIC_API_URL`
       - Value: `https://hoocup-api.onrender.com/api/auth` (Must include `/api/auth` at the end).
+      - Name: `NEXT_PUBLIC_GCP_BUCKET_NAME`
+      - Value: [Your Bucket Name]
       - *Note: If `CLIENT_URL` on Render is set to your Vercel URL, Google Login will work automatically without manual redirect URI matching.*
 4.  Click **Deploy**.
 

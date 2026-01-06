@@ -263,7 +263,7 @@ exports.refreshToken = async (req, res) => {
 };
 
 exports.registerDetails = async (req, res) => {
-    const { username, first_name, last_name, dob } = req.body;
+    const { username, first_name, last_name, dob, avatar } = req.body;
     
     // Server-side Age Validation
     const birthDate = new Date(dob);
@@ -286,6 +286,7 @@ exports.registerDetails = async (req, res) => {
         user.first_name = first_name;
         user.last_name = last_name;
         user.dob = dob;
+        if (avatar) user.avatar = avatar;
         user.is_profile_complete = true;
 
         await user.save();
@@ -314,6 +315,21 @@ exports.logout = async (req, res) => {
     }
     clearCookies(res);
     res.status(200).json({ message: 'Logged out' });
+};
+
+exports.getUserByUsername = async (req, res) => {
+    try {
+        const { username } = req.params;
+        const user = await User.findOne({ username });
+        if (!user) return res.status(404).json({ message: 'User not found' });
+        
+        // Return public info only
+        // Mongoose default projection is fine, but we might want to be explicit optionally.
+        // For now, return whole user object (minus sensitive hash).
+        res.status(200).json(user);
+    } catch (error) {
+         res.status(500).json({ message: 'Server Error' });
+    }
 };
 
 exports.getMe = async (req, res) => {

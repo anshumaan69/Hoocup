@@ -30,7 +30,7 @@ function HomeContent() {
     const handleLogout = async () => {
         try {
             await api.post('/logout');
-            router.push('/login'); // Redirect to login
+            router.push('/login'); 
         } catch (error) {
             console.error('Logout failed', error);
         }
@@ -42,44 +42,24 @@ function HomeContent() {
 
     return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-black text-white p-8">
-            <div className="w-full max-w-2xl bg-zinc-900 border border-zinc-800 rounded-xl p-8 shadow-2xl">
-                <div className="flex flex-col items-center mb-8">
-                     <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-4xl font-bold mb-4">
-                        {user.first_name?.[0]}{user.last_name?.[0]}
-                     </div>
-                     <h1 className="text-3xl font-bold">{user.first_name} {user.last_name}</h1>
-                     <p className="text-zinc-400">@{user.username}</p>
-                </div>
+            <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-blue-400 to-purple-600 text-transparent bg-clip-text">
+                Welcome to Hoocup
+            </h1>
+            <p className="text-xl text-zinc-400 mb-12">Connect, Share, and Grow.</p>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <div className="bg-zinc-800/50 p-4 rounded-lg">
-                        <span className="text-zinc-500 text-sm block mb-1">Email</span>
-                        <span className="text-lg">{user.email || 'Not provided'}</span>
-                    </div>
-                    <div className="bg-zinc-800/50 p-4 rounded-lg">
-                        <span className="text-zinc-500 text-sm block mb-1">Phone</span>
-                        <span className="text-lg">{user.phone}</span>
-                    </div>
-                    <div className="bg-zinc-800/50 p-4 rounded-lg">
-                        <span className="text-zinc-500 text-sm block mb-1">Date of Birth</span>
-                        <span className="text-lg">{user.dob ? new Date(user.dob).toLocaleDateString() : 'N/A'}</span>
-                    </div>
-                    <div className="bg-zinc-800/50 p-4 rounded-lg">
-                        <span className="text-zinc-500 text-sm block mb-1">Status</span>
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-900 text-green-200">
-                            Verified
-                        </span>
-                    </div>
-                </div>
-                
-                <div className="flex justify-center">
-                    <button 
-                        onClick={handleLogout}
-                        className="rounded-full bg-red-600/90 px-8 py-3 text-white font-semibold hover:bg-red-700 transition"
-                    >
-                        Logout
-                    </button>
-                </div>
+            <div className="flex gap-6">
+                <button 
+                    onClick={() => router.push(`/${user.username}`)}
+                    className="px-8 py-4 bg-white text-black font-bold rounded-full hover:bg-zinc-200 transition-transform hover:scale-105"
+                >
+                    Go to My Profile
+                </button>
+                <button 
+                    onClick={handleLogout}
+                    className="px-8 py-4 bg-zinc-800 text-white font-bold rounded-full hover:bg-zinc-700 transition"
+                >
+                    Logout
+                </button>
             </div>
         </div>
     );

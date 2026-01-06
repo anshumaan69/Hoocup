@@ -11,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google-cloud/storage": "^7.18.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -19,7 +20,8 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.3",
     "rate-limiter-flexible": "^5.0.4",
-    "twilio": "^5.4.0"
+    "twilio": "^5.4.0",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.9"

@@ -14,6 +14,10 @@ export function RegisterDetailsContent() {
         username: ''
     });
 
+    const [avatar, setAvatar] = useState<File | null>(null);
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+    const [uploading, setUploading] = useState(false);
+
     // No manual token check needed
     // Middleware and cookies handle auth state
 
@@ -21,11 +25,52 @@ export function RegisterDetailsContent() {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            validateImage(file);
+            setAvatar(file);
+            setAvatarPreview(URL.createObjectURL(file));
+        } catch (error: any) {
+            alert(error.message);
+        }
+    };
+
+    function validateImage(file: File) {
+      if (!file.type.startsWith("image/")) {
+        throw new Error("Only images allowed");
+      }
+    
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error("Max 5MB allowed");
+      }
+    }
+
     const handleGenerateUsername = () => {
         const base = formData.first_name ? formData.first_name.toLowerCase().replace(/\s/g, '') : 'user';
         const random = Math.floor(Math.random() * 10000);
         setFormData({ ...formData, username: `${base}${random}` });
     };
+
+    async function convertToWebP(file: File): Promise<Blob> {
+      const bitmap = await createImageBitmap(file);
+      const canvas = document.createElement("canvas");
+      canvas.width = 512;
+      canvas.height = 512;
+    
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(bitmap, 0, 0, 512, 512);
+    
+      return new Promise((resolve) => {
+        canvas.toBlob(
+          (blob) => resolve(blob!),
+          "image/webp",
+          0.8
+        );
+      });
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -44,16 +89,45 @@ export function RegisterDetailsContent() {
             return;
         }
 
+        setUploading(true);
         try {
-            await api.post('/register-details', formData);
+            let avatarUrl = null;
+            if (avatar) {
+                // 1. Convert to WebP
+                const webpImage = await convertToWebP(avatar);
+
+                // 2. Get Signed URL
+                const { data } = await api.get('/avatar/upload-url');
+                const { uploadUrl, filePath } = data;
+
+                // 3. Upload to GCS
+                await fetch(uploadUrl, {
+                    method: 'PUT',
+                    body: webpImage,
+                    headers: {
+                        'Content-Type': 'image/webp'
+                    }
+                });
+                
+                // 4. Save Avatar using dedicated endpoint (as requested)
+                await api.post("/avatar/save", { filePath });
+
+                // Construct URL for register details fallback (though saveAvatar updates the user too)
+                avatarUrl = `https://storage.googleapis.com/${process.env.NEXT_PUBLIC_GCP_BUCKET_NAME}/${filePath}`;
+            }
+
+            // Still call register-details to update text fields
+            // We pass avatarUrl just in case, or if the backend controller logic needs it contextually
+            await api.post('/register-details', { ...formData, avatar: avatarUrl });
             router.push('/home');
         } catch (error: any) {
-            console.error('Registration failed', error);
             console.error('Registration failed', error);
             const data = error.response?.data || {};
             const msg = data.message || 'Failed to update details';
             const debugInfo = data.error ? `\nError: ${data.error}` : '';
             alert(`${msg}${debugInfo}`);
+        } finally {
+            setUploading(false);
         }
     };
 
@@ -64,6 +138,22 @@ export function RegisterDetailsContent() {
                 <p className="text-zinc-400 mb-8 text-center">One last step to join the community.</p>
                 
                 <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                    
+                    {/* Avatar Selection */}
+                    <div className="flex flex-col items-center mb-4">
+                        <div className="w-24 h-24 rounded-full bg-zinc-800 mb-2 overflow-hidden border border-zinc-700 relative">
+                             {avatarPreview ? (
+                                <img src={avatarPreview} alt="Avatar Preview" className="w-full h-full object-cover" />
+                             ) : (
+                                <div className="flex items-center justify-center h-full text-zinc-500 text-xs">No Image</div>
+                             )}
+                        </div>
+                        <label className="cursor-pointer bg-zinc-800 px-3 py-1 rounded text-sm hover:bg-zinc-700">
+                            Upload Avatar
+                            <input type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} />
+                        </label>
+                    </div>
+
                     <div className="flex gap-4">
                         <div className="flex-1">
                             <label className="block text-sm font-medium mb-1 text-zinc-300">First Name</label>
@@ -124,9 +214,10 @@ export function RegisterDetailsContent() {
 
                     <button 
                         type="submit"
-                        className="mt-4 bg-blue-600 text-white p-3 rounded font-semibold hover:bg-blue-700 transition-colors"
+                        disabled={uploading}
+                        className="mt-4 bg-blue-600 text-white p-3 rounded font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
                     >
-                        Finish Setup
+                        {uploading ? 'Uploading...' : 'Finish Setup'}
                     </button>
                 </form>
              </div>
