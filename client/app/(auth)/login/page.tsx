@@ -13,11 +13,14 @@ export function LoginContent() {
 
     // Check if already logged in
     useEffect(() => {
+        console.log('Checking auth status...');
         api.get('/me')
-            .then(() => {
+            .then((res) => {
+                console.log('Auth check success, redirecting...', res.data);
                 router.push('/home'); // Already authenticated -> Go Home
             })
-            .catch(() => {
+            .catch((err) => {
+                console.log('Auth check failed (User needs to login):', err);
                 // Not logged in, show form
             });
     }, [router]);
