@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  const token = request.cookies.get('token')?.value;
+  const accessToken = request.cookies.get('access_token')?.value;
+  const refreshToken = request.cookies.get('refresh_token')?.value;
+  const token = accessToken || refreshToken; // Consider logged in if either exists
   const { pathname } = request.nextUrl;
   
   if (pathname.includes('/home') || pathname.includes('/auth/callback')) {

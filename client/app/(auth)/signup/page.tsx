@@ -15,21 +15,7 @@ export function SignupContent() {
     const [otp, setOtp] = useState('');
     const [isOtpSent, setIsOtpSent] = useState(false);
 
-    useEffect(() => {
-        const tokenFromUrl = searchParams.get('token');
-        if (tokenFromUrl) {
-            localStorage.setItem('token', tokenFromUrl);
-             // Optional: clean URL
-             const newUrl = window.location.pathname + `?step=${initialStep}`; // Keep step param
-             window.history.replaceState({}, '', newUrl);
-        } else {
-            // If no token in URL, check if we already have one
-            const storedToken = localStorage.getItem('token');
-            if (storedToken) {
-                router.push('/home');
-            }
-        }
-    }, [searchParams, initialStep, router]);
+    // Removed localStorage checks. Middleware handles redirect.
 
     const login = useGoogleLogin({
         flow: 'auth-code',
@@ -55,11 +41,7 @@ export function SignupContent() {
         try {
             const res = await api.post('/verify-otp', { phone, code: otp });
             if (res.status === 200) {
-                // Save token from response if available (Cookie backup)
-                if (res.data.token) {
-                    localStorage.setItem('token', res.data.token);
-                }
-
+                // Cookies handled by server
                 if (res.data.user && res.data.user.is_profile_complete) {
                      router.push('/home'); // Or dashboard
                 } else {

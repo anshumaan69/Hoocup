@@ -25,6 +25,10 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    refresh_token_hash: {
+        type: String,
+        select: false, // Do not return by default
+    },
     username: {
         type: String,
         unique: true,

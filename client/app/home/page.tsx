@@ -10,33 +10,20 @@ function HomeContent() {
     const searchParams = useSearchParams();
 
     useEffect(() => {
-        const token = searchParams.get('token');
-        if (token) {
-            localStorage.setItem('token', token);
-             const newUrl = window.location.pathname;
-             window.history.replaceState({}, '', newUrl);
-        }
-
+        // Just fetch user. Interceptor handles 401->Refresh->Retry or Redirect
         api.get('/me')
             .then(res => setUser(res.data))
-            .catch(async (err) => {
+            .catch((err) => {
                 console.error('Failed to fetch user', err);
-                // Clear any invalid tokens to prevent redirect loops
-                localStorage.removeItem('token');
-                try {
-                    await api.post('/logout');
-                } catch (e) {
-                    console.error('Logout failed during cleanup', e);
-                }
-                router.push('/login');
+                // No need to clear localStorage anymore
+                // API interceptor should have handled redirect to /login if refresh failed
             });
-    }, [router, searchParams]);
+    }, [router]);
 
     const handleLogout = async () => {
         try {
             await api.post('/logout');
-            localStorage.removeItem('token'); // Clear token
-            router.push('/');
+            router.push('/login'); // Redirect to login
         } catch (error) {
             console.error('Logout failed', error);
         }

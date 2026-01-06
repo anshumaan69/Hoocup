@@ -11,12 +11,9 @@ export function LoginContent() {
     const [otp, setOtp] = useState('');
     const [showOtpInput, setShowOtpInput] = useState(false);
 
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            router.push('/home');
-        }
-    }, [router]);
+    // Note: We no longer check localStorage. 
+    // Middleware handles redirection if cookies are present.
+    // Or we rely on API to succeed/fail.
 
     const login = useGoogleLogin({
         flow: 'auth-code',
@@ -42,11 +39,7 @@ export function LoginContent() {
         try {
             const res = await api.post('/verify-otp', { phone, code: otp });
             if (res.status === 200) {
-                 // Save token from response if available (Cookie backup)
-                 if (res.data.token) {
-                    localStorage.setItem('token', res.data.token);
-                }
-
+                 // Cookies handled by server
                 if (res.data.user && res.data.user.is_profile_complete) {
                      router.push('/home'); // Or dashboard
                 } else {

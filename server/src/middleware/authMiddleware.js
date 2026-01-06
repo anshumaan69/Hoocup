@@ -1,23 +1,20 @@
 const jwt = require('jsonwebtoken');
 
 exports.protect = async (req, res, next) => {
-    let token;
-
-    if (req.cookies.token) {
-        token = req.cookies.token;
-    } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-        token = req.headers.authorization.split(' ')[1];
-    }
+    // 1. Strict Cookie Check (Access Token)
+    const token = req.cookies.access_token;
 
     if (!token) {
-        return res.status(401).json({ message: 'Not authorized, no token' });
+        // Frontend should catch 401 and try /refresh
+        return res.status(401).json({ message: 'No access token' });
     }
 
     try {
-        const decoded = jwt.verify(token , process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
         req.user = decoded; // { id: ... }
         next();
     } catch (error) {
-        res.status(401).json({ message: 'Not authorized, token failed' });
+        // Token expired or invalid
+        return res.status(401).json({ message: 'Token invalid or expired' });
     }
 };

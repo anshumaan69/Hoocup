@@ -14,15 +14,8 @@ export function RegisterDetailsContent() {
         username: ''
     });
 
-    useEffect(() => {
-        const token = searchParams.get('token');
-        if (token) {
-            localStorage.setItem('token', token);
-            // Optional: clean URL
-             const newUrl = window.location.pathname;
-             window.history.replaceState({}, '', newUrl);
-        }
-    }, [searchParams]);
+    // No manual token check needed
+    // Middleware and cookies handle auth state
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });

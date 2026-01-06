@@ -10,16 +10,44 @@ const api = axios.create({
     },
 });
 
+// Request Interceptor: Add CSRF Token if present
 api.interceptors.request.use((config) => {
-    if (typeof window !== 'undefined') {
-        const token = localStorage.getItem('token');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+    if (typeof document !== 'undefined') {
+        // Read "csrf_token" from cookie (not httpOnly)
+        const match = document.cookie.match(new RegExp('(^| )csrf_token=([^;]+)'));
+        if (match) {
+            config.headers['X-CSRF-Token'] = match[2];
         }
     }
     return config;
 }, (error) => {
     return Promise.reject(error);
 });
+
+// Response Interceptor: Silent Refresh
+api.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+        const originalRequest = error.config;
+
+        // Prevent infinite loops
+        if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/refresh')) {
+            originalRequest._retry = true;
+            try {
+                // Attempt refresh
+                await api.post('/auth/refresh');
+                // Retry original request (cookies will be automatically attached)
+                return api(originalRequest);
+            } catch (refreshError) {
+                // Refresh failed - redirect to login
+                if (typeof window !== 'undefined') {
+                    window.location.href = '/login'; 
+                }
+                return Promise.reject(refreshError);
+            }
+        }
+        return Promise.reject(error);
+    }
+);
 
 export default api;
