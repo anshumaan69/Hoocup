@@ -1,9 +1,7 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/auth';
-
 const api = axios.create({
-    baseURL: API_URL,
+    baseURL: '/api/auth', // Trace through Next.js rewrite proxy for cookies
     withCredentials: true,
     headers: {
         'Content-Type': 'application/json',
