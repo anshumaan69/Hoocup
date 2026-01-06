@@ -19,9 +19,15 @@ function HomeContent() {
 
         api.get('/me')
             .then(res => setUser(res.data))
-            .catch((err) => {
+            .catch(async (err) => {
                 console.error('Failed to fetch user', err);
-                // Only redirect if valid token wasn't just set or if call failed despite it
+                // Clear any invalid tokens to prevent redirect loops
+                localStorage.removeItem('token');
+                try {
+                    await api.post('/logout');
+                } catch (e) {
+                    console.error('Logout failed during cleanup', e);
+                }
                 router.push('/login');
             });
     }, [router, searchParams]);
