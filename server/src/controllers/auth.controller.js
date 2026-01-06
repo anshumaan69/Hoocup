@@ -275,7 +275,11 @@ exports.registerDetails = async (req, res) => {
         await user.save();
         res.status(200).json({ message: 'Profile updated successfully', user });
     } catch (error) {
-        res.status(500).json({ message: 'Failed to update profile' });
+        console.error('Register Details Error:', error);
+        if (error.code === 11000) {
+            return res.status(400).json({ message: 'Username already taken' });
+        }
+        res.status(500).json({ message: error.message || 'Failed to update profile' });
     }
 };
 
