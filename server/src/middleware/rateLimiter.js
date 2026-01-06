@@ -1,8 +1,8 @@
 const { RateLimiterMemory } = require('rate-limiter-flexible');
 
 const otpLimiter = new RateLimiterMemory({
-    points: 100,
-    duration: 60 
+    points: 3, // Strict limit: 3 requests
+    duration: 24 * 60 * 60 // per 24 hours
 });
 
 const rateLimiterMiddleware = async (req, res, next) => {

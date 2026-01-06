@@ -1,75 +1,158 @@
-# Authentication System Overview
+# 📘 Authentication & User Onboarding Documentation
 
-Your application uses a **Hybrid Authentication Strategy** designed for maximum reliability. It primarily attempts to use secure **HTTP-Only Cookies** but automatically falls back to **Bearer Tokens** (stored in `localStorage`) if cookies fail (e.g., due to third-party cookie blocking, cross-site issues, or local development environments).
+## 1. Overview
+This system implements a secure dual-authentication onboarding flow where a user must verify both **Google OAuth** and **Phone OTP** to fully access the application dashboard.
 
-## 1. Login & Token Generation
+The application ensures:
+*   Strong identity verification
+*   Secure session handling via cookies
+*   Route-level protection using Next.js middleware
+*   SMS abuse prevention via rate limiting
 
-### Google Login
-1.  **User Trigger**: User clicks "Sign in with Google".
-2.  **Google Exchange**: After Google approves, your server (`auth.controller.js`) exchanges the code for a Google profile.
-3.  **User Creation/Lookup**: The server finds or creates the user in MongoDB.
-4.  **Token Creation**: A **JWT (JSON Web Token)** is generated for the user.
-5.  **Response**:
-    -   **Cookie**: The server attempts to set an `httpOnly` cookie named `token`.
-    -   **JSON Body**: The server *also* sends the same JWT in the response body.
-6.  **Client Handling** (`api/auth/callback/google/route.ts`):
-    -   The Next.js API route receives the token.
-    -   It redirects the user to `/home` and appends the token to the URL (`/home?token=eyJ...`) so the client can access it.
+## 2. Database Schema (User Model)
+**Database**: MongoDB
+**ORM**: Mongoose
 
-### Phone Verification (OTP)
-1.  **Verification**: User verifies their phone number via Twilio.
-2.  **Merging**: The server checks if the phone matches an existing Google user and merges accounts if necessary.
-3.  **Response**: similar to Google, it returns a token in both the Cookie and the JSON body.
+### User Schema
+```json
+{
+  "_id": "ObjectId",
 
-## 2. Token Storage
+  "email": "String", 
+  "phone": "String",
 
-The application stores the authentication token in **two places** simultaneously to ensure you never get "locked out":
+  "auth_provider": "String", 
 
-1.  **Browser Cookie (`token`)**:
-    -   **Type**: `httpOnly`, `Secure` (in production).
-    -   **Purpose**: Automatic authentication for server-side requests and Next.js middleware.
-    -   **Security**: High. JavaScript cannot read this, protecting it from XSS attacks.
+  "is_phone_verified": "Boolean",
+  "is_profile_complete": "Boolean",
 
-2.  **LocalStorage (`token`)**:
-    -   **Type**: Browser storage.
-    -   **Purpose**: Fallback authentication. If the cookie is blocked or missing, the client reads this.
-    -   **Client Code**: In `home/page.tsx` (and others), we explicitly check for the token in the URL or storage:
-        ```javascript
-        const token = searchParams.get('token');
-        if (token) localStorage.setItem('token', token);
-        ```
+  "username": "String",
+  "first_name": "String",
+  "last_name": "String",
+  "dob": "Date",
 
-## 3. Making Requests (Client -> Server)
+  "created_at": "Date",
+  "updated_at": "Date"
+}
+```
 
-When your frontend (React/Next.js) makes a request to the backend (Node/Express), it sends credentials in **two ways**:
+### Field Logic
+| Field | Description |
+| :--- | :--- |
+| `email` | Obtained via Google OAuth or manual input |
+| `phone` | Mandatory for all users |
+| `auth_provider` | `google` or `local` |
+| `is_phone_verified` | Must be `true` to access dashboard |
+| `is_profile_complete` | Ensures profile setup before access |
+| `username` | Auto-generated but user-editable |
+| `dob` | Required for profile completion |
+| `created_at` | Auto-managed |
+| `updated_at` | Auto-managed |
 
-1.  **Cookies**: The browser automatically attaches the `token` cookie to requests (handled by `credentials: true` in Axios).
-2.  **Authorization Header**: We added an **Interceptor** in `services/api.ts` that manually attaches the token from LocalStorage:
-    ```javascript
-    config.headers.Authorization = `Bearer ${localStorage.getItem('token')}`;
-    ```
+## 3. Technology Stack
+| Component | Technology |
+| :--- | :--- |
+| **Frontend** | Next.js |
+| **Backend** | Next.js API Routes |
+| **Database** | MongoDB |
+| **Auth (Google)** | OAuth 2.0 |
+| **Auth (Phone)** | Twilio OTP |
+| **Route Protection** | Next.js Middleware |
+| **Session Storage** | Secure Cookies |
 
-## 4. Server Validation
+## 4. Authentication & Onboarding Flow
 
-The server (`authMiddleware.js`) is designed to accept *either* method. It checks in this order:
+### A. Signup Flow
+1.  User clicks **Signup** on Home Screen
+2.  User must complete both:
+    *   **Google OAuth Authentication**
+    *   **Phone Number OTP Verification**
+3.  After verification:
+    *   Redirected to `/api/user/register-details`
+4.  User enters:
+    *   First Name
+    *   Last Name
+    *   Date of Birth
+5.  System auto-generates:
+    *   Username (editable)
+6.  Profile completion sets:
+    *   `is_profile_complete = true`
+7.  User redirected to `/home`
 
-1.  **Check Cookie**: Is there a `req.cookies.token`? If yes, use it.
-2.  **Check Header**: If no cookie, is there an `Authorization: Bearer <token>` header? If yes, use it.
+### B. Login Flow
+1.  User can authenticate using either:
+    *   **Google OAuth**
+    *   OR
+    *   **Phone OTP**
+2.  Upon successful authentication:
+    *   Redirect to `/home`
 
-This "Double-Check" ensures that if one method fails (e.g., Safari blocks the cookie), the other method (header) still succeeds.
+## 5. Security Measures
 
-## 5. Route Protection
+### 5.1 Rate Limiting (OTP Abuse Prevention)
+| Rule | Value | Applied To |
+| :--- | :--- | :--- |
+| **Phone OTP Limit** | 3 requests per phone | Prevent SMS pumping |
 
-### Server-Side (Middleware)
--   File: `middleware.ts`
--   **Relaxed Rules**: We removed strict checks for `/home` to prevent loop issues. It mainly protects `/dashboard`.
--   **Redirect**: If a logged-in user tries to visit `/login`, they are redirected to `/home`.
+### 5.2 Route Protection (Next.js Middleware)
+**Rules**:
+*   User must be authenticated
+*   Phone must be verified
+*   Profile must be complete
 
-### Client-Side (Pages)
--   File: `home/page.tsx`, `login/page.tsx`
--   **Logic**: The page code runs in the browser. It checks `localStorage`.
-    -   If you are on Home but have no token? -> **Logout & Redirect to Login**.
-    -   If you are on Login but *have* a token? -> **Redirect to Home**.
+```javascript
+if (!auth || !user.is_phone_verified || !user.is_profile_complete) {
+  redirect("/login");
+}
+```
 
-## Summary
-By combining **Cookies** (best for security) with **LocalStorage + Bearer Headers** (best for reliability), your app provides a robust login experience that works across different browsers and hosting environments (Vercel + Render).
+## 6. Mermaid Diagrams (User Flow)
+
+### Request Flow
+```mermaid
+graph TD
+    A[User Request] --> B[Middleware Check]
+    B -- Valid Token --> C[Backend API]
+    B -- Invalid Token --> D[Redirect Login]
+    C --> E[Data Response]
+```
+
+### Complete User Authentication Flow
+```mermaid
+sequenceDiagram
+    participant User
+    participant Client
+    participant Server
+    participant DB
+    participant Twilio
+    
+    User->>Client: Signup with Google
+    Client->>Server: OAuth Request
+    Server->>DB: Create/Find User
+    Server-->>Client: Return Session (Cookie)
+    
+    Client->>User: Request Phone Number
+    User->>Client: Submit Phone
+    Client->>Server: Request OTP
+    Server->>Twilio: Send SMS
+    Twilio-->>User: SMS Code
+    
+    User->>Client: Enter OTP
+    Client->>Server: Verify OTP
+    Server->>DB: Link Phone & Verify
+    Server-->>Client: Success
+    
+    Client->>User: Redirect to Profile Details
+```
+
+### Route Protection Logic
+```mermaid
+flowchart TD
+    Start[User Visits /home] --> AuthCheck{Auth Cookie?}
+    AuthCheck -- No --> Login[Redirect /login]
+    AuthCheck -- Yes --> PhoneCheck{Phone Verified?}
+    PhoneCheck -- No --> OTP[Redirect /signup?step=2]
+    PhoneCheck -- Yes --> ProfileCheck{Profile Complete?}
+    ProfileCheck -- No --> Details[Redirect /register-details]
+    ProfileCheck -- Yes --> Dashboard[Access Dashboard]
+```
