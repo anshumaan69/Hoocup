@@ -434,7 +434,7 @@ exports.uploadPhotos = async (req, res) => {
              }
         }
 
-        }
+
 
         await user.save();
         res.status(200).json({ message: 'Photos uploaded', photos: user.photos, profilePhoto: user.profilePhoto });

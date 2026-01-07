@@ -58,7 +58,7 @@ The application ensures:
 | **Auth (Google)** | OAuth 2.0 |
 | **Auth (Phone)** | Twilio OTP |
 | **Route Protection** | Next.js Middleware |
-| **Session Storage** | Secure Cookies |
+| **Session Storage** | On signup while registering give the user a feature to add 4 of his/her photos as cards and also give him the feature of which photo  does he/she want to show in her profile card ...Similar to that of tinderSecure Cookies |
 
 ## 4. Authentication & Onboarding Flow
 
