@@ -23,8 +23,8 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        source: '/api/auth/:path*', // Specific match for auth to align with NEXT_PUBLIC_API_URL containing /api/auth
-        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/auth'}/:path*`,
+        source: '/api/:path*',
+        destination: 'http://localhost:5000/api/:path*',
       },
     ];
   },

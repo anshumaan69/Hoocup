@@ -59,6 +59,12 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
 
+    role: {
+        type: String,
+        enum: ['user', 'admin'],
+        default: 'user',
+    },
+
     refresh_token_hash: {
       type: String,
       select: false,

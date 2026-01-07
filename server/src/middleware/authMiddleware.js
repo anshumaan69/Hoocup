@@ -1,20 +1,38 @@
 const jwt = require('jsonwebtoken');
+const User = require('../models/user'); // Assuming User model is located here
 
-exports.protect = async (req, res, next) => {
-    // 1. Strict Cookie Check (Access Token)
-    const token = req.cookies.access_token;
+const protect = async (req, res, next) => {
+    let token;
+    
+    if (req.cookies.access_token) {
+        token = req.cookies.access_token;
+    }
 
     if (!token) {
-        // Frontend should catch 401 and try /refresh
-        return res.status(401).json({ message: 'No access token' });
+        return res.status(401).json({ message: 'Not authorized, no token' });
     }
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded; // { id: ... }
+        req.user = await User.findById(decoded.id).select('-password');
+        if (!req.user) {
+             return res.status(401).json({ message: 'User not found' });
+        }
         next();
     } catch (error) {
-        // Token expired or invalid
-        return res.status(401).json({ message: 'Token invalid or expired' });
+        res.status(401).json({ message: 'Not authorized, token failed' });
     }
 };
+
+const authorize = (...roles) => {
+    return (req, res, next) => {
+        if (!roles.includes(req.user.role)) {
+            return res.status(403).json({ 
+                message: `User role ${req.user.role} is not authorized to access this route` 
+            });
+        }
+        next();
+    };
+};
+
+module.exports = { protect, authorize };

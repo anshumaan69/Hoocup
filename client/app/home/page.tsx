@@ -47,7 +47,15 @@ function HomeContent() {
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 text-transparent bg-clip-text">
                     Hoocup
                 </h1>
-                 <div className="flex gap-4">
+                <div className="flex gap-4">
+                    {user.role === 'admin' && (
+                        <button 
+                            onClick={() => router.push('/admin')}
+                            className="text-sm font-semibold text-purple-400 hover:text-purple-300 transition"
+                        >
+                            Admin Panel
+                        </button>
+                    )}
                     <button 
                          onClick={() => router.push(`/${user.username}`)}
                          className="text-sm font-semibold text-zinc-300 hover:text-white transition"
