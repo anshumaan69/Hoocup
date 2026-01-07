@@ -105,14 +105,14 @@ export default function PhotoUploadGrid({ photos, setPhotos, updateProfilePhotoL
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
-          className="aspect-square rounded-xl border-2 border-dashed border-zinc-700 bg-zinc-900/50 hover:bg-zinc-800 hover:border-zinc-500 transition-all flex flex-col items-center justify-center gap-2 text-zinc-400 hover:text-white group disabled:opacity-50 disabled:cursor-not-allowed"
+          className="aspect-square rounded-xl border-2 border-dashed border-border bg-secondary/50 hover:bg-secondary hover:border-muted-foreground transition-all flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground group disabled:opacity-50 disabled:cursor-not-allowed"
           type="button"
         >
           {isUploading ? (
-            <Loader2 className="animate-spin text-blue-500" />
+            <Loader2 className="animate-spin text-primary" />
           ) : (
             <>
-              <div className="p-3 rounded-full bg-zinc-800 group-hover:bg-zinc-700 transition-colors">
+              <div className="p-3 rounded-full bg-muted group-hover:bg-muted/80 transition-colors">
                 <Plus size={24} />
               </div>
               <span className="text-sm font-medium">Add Photo</span>

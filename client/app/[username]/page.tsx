@@ -60,10 +60,18 @@ function ProfileContent() {
         // Fetch Me (for ownership check)
         const fetchMe = async () => {
              try {
-                const res = await api.get('/me');
+                const res = await api.get('/auth/me'); // Ensure correct path (it was /me in auth routes, but wait, routes were at /api/auth or /api/users?)
+                // API Structure Check:
+                // server/index.js -> app.use('/api/auth', authRoutes);
+                // auth.routes.js -> router.get('/me', protect, getMe);
+                // So path SHOULD be /auth/me. 
+                // Previous code in page.tsx had: api.get('/me'). 
+                // api.ts baseURL is /api. So api.get('/me') -> /api/me. 
+                // BUT endpoint is /api/auth/me!
+                
                 setCurrentUser(res.data);
              } catch (e) {
-                // Not logged in or error
+                console.error('Fetch Me failed:', e);
              }
         };
 
@@ -125,7 +133,7 @@ function ProfileContent() {
                 // However, our api interceptor might force JSON.
                 // Let's use axios instance 'api' but override headers.
                 
-                const res = await api.post('/avatar', formData, {
+                const res = await api.post('/auth/avatar', formData, {
                     headers: { 'Content-Type': 'multipart/form-data' } 
                 });
                 
@@ -133,7 +141,7 @@ function ProfileContent() {
             }
 
             // 2. Update other details
-            const res = await api.post('/register-details', { ...formData, avatar: avatarUrl });
+            const res = await api.post('/auth/register-details', { ...formData, avatar: avatarUrl });
             setProfile(res.data.user);
             setIsEditing(false);
             alert('Profile Updated');
@@ -147,18 +155,19 @@ function ProfileContent() {
         }
     };
 
-    if (loading) return <div className="flex justify-center items-center h-screen bg-black text-white">Loading...</div>;
-    if (!profile) return <div className="flex justify-center items-center h-screen bg-black text-white">User not found</div>;
+    if (loading) return <div className="flex justify-center items-center h-screen bg-background text-foreground">Loading...</div>;
+    if (!profile) return <div className="flex justify-center items-center h-screen bg-background text-foreground">User not found</div>;
 
-    const isOwner = currentUser && currentUser.username === profile.username;
+    const isOwner = currentUser && (currentUser._id === profile._id || currentUser.username === profile.username);
+    console.log('IsOwner Debug:', { currentUser: currentUser?._id, profile: profile?._id, isOwner });
 
     return (
-        <div className="flex min-h-screen flex-col items-center justify-center bg-black text-white p-8">
-            <div className="w-full max-w-2xl bg-zinc-900 border border-zinc-800 rounded-xl p-8 shadow-2xl relative">
+        <div className="flex min-h-screen flex-col items-center justify-center bg-background text-foreground p-8">
+            <div className="w-full max-w-2xl bg-card border border-border rounded-xl p-8 shadow-2xl relative">
                 
                 {/* Header / Avatar */}
                 <div className="flex flex-col items-center mb-8">
-                     <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-zinc-800 shadow-xl mb-4 group">
+                     <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-muted shadow-xl mb-4 group ring-2 ring-transparent group-hover:ring-primary transition-all">
                         <img 
                             src={avatarPreview || profile.profilePhoto || profile.avatar || '/default-avatar.png'} 
                             alt={profile.username} 
@@ -167,7 +176,7 @@ function ProfileContent() {
                         />
                         {isEditing && (
                              <label className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
-                                <span className="text-xs">Change</span>
+                                <span className="text-xs text-white">Change</span>
                                 <input type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} />
                              </label>
                         )}
@@ -175,21 +184,23 @@ function ProfileContent() {
 
                      {isEditing ? (
                         <div className="flex gap-2 mb-2 w-full justify-center">
-                            <input name="first_name" value={formData.first_name} onChange={handleChange} className="bg-zinc-800 p-2 rounded text-center w-32" placeholder="First Name" />
-                            <input name="last_name" value={formData.last_name} onChange={handleChange} className="bg-zinc-800 p-2 rounded text-center w-32" placeholder="Last Name" />
+                            <input name="first_name" value={formData.first_name} onChange={handleChange} className="bg-input border border-border p-2 rounded text-center w-32 focus:ring-1 focus:ring-primary outline-none" placeholder="First Name" />
+                            <input name="last_name" value={formData.last_name} onChange={handleChange} className="bg-input border border-border p-2 rounded text-center w-32 focus:ring-1 focus:ring-primary outline-none" placeholder="Last Name" />
                         </div>
                      ) : (
-                        <h1 className="text-3xl font-bold">{profile.first_name} {profile.last_name}</h1>
+                        <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 text-transparent bg-clip-text">
+                            {profile.first_name} {profile.last_name}
+                        </h1>
                      )}
                      
-                     <p className="text-zinc-400">@{profile.username}</p>
+                     <p className="text-muted-foreground">@{profile.username}</p>
                      
                      {isEditing ? (
                          <textarea 
                             name="bio" 
                             value={formData.bio} 
                             onChange={(e) => handleChange(e as any)} 
-                            className="bg-zinc-800 p-2 rounded w-full mt-4 text-center h-20 resize-none" 
+                            className="bg-input border border-border p-2 rounded w-full mt-4 text-center h-20 resize-none focus:ring-1 focus:ring-primary outline-none" 
                             placeholder="Bio..."
                             maxLength={150} 
                         />
@@ -200,18 +211,18 @@ function ProfileContent() {
 
                 {/* Details Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <div className="bg-zinc-800/50 p-4 rounded-lg">
-                        <span className="text-zinc-500 text-sm block mb-1">Email {isOwner ? '(Private)' : ''}</span>
+                    <div className="bg-secondary/50 p-4 rounded-lg border border-border">
+                        <span className="text-muted-foreground text-sm block mb-1">Email {isOwner ? '(Private)' : ''}</span>
                         {isOwner ? (
                              <span className="text-lg">{currentUser?.email || 'N/A'}</span>
                         ) : (
-                             <span className="text-lg blur-sm select-none">Hidden</span>
+                             <span className="text-lg blur-sm select-none text-muted-foreground">Hidden</span>
                         )}
                     </div>
-                    <div className="bg-zinc-800/50 p-4 rounded-lg">
-                         <span className="text-zinc-500 text-sm block mb-1">Date of Birth</span>
+                    <div className="bg-secondary/50 p-4 rounded-lg border border-border">
+                         <span className="text-muted-foreground text-sm block mb-1">Date of Birth</span>
                          {isEditing ? (
-                            <input type="date" name="dob" value={formData.dob} onChange={handleChange} className="bg-zinc-700 text-white p-1 rounded w-full" />
+                            <input type="date" name="dob" value={formData.dob} onChange={handleChange} className="bg-input text-foreground p-1 rounded w-full border border-border focus:ring-1 focus:ring-primary outline-none" />
                          ) : (
                             <span className="text-lg">{profile.dob ? new Date(profile.dob).toLocaleDateString() : 'N/A'}</span>
                          )}
@@ -236,7 +247,7 @@ function ProfileContent() {
                                     readOnly={true} 
                                 />
                             )) : (
-                                <p className="text-zinc-500 col-span-full text-center py-4 bg-zinc-800/20 rounded-lg">No photos uploaded</p>
+                                <p className="text-muted-foreground col-span-full text-center py-4 bg-secondary/30 rounded-lg border border-dashed border-border">No photos uploaded</p>
                             )}
                         </div>
                     )}
@@ -247,7 +258,7 @@ function ProfileContent() {
                     {isOwner && !isEditing && (
                         <button 
                             onClick={() => setIsEditing(true)}
-                            className="bg-blue-600 px-6 py-2 rounded-full font-semibold hover:bg-blue-700"
+                            className="bg-primary px-6 py-2 rounded-full font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-lg shadow-primary/25"
                         >
                             Edit Profile
                         </button>
@@ -257,13 +268,13 @@ function ProfileContent() {
                             <button 
                                 onClick={handleSave}
                                 disabled={uploading}
-                                className="bg-green-600 px-6 py-2 rounded-full font-semibold hover:bg-green-700 disabled:opacity-50"
+                                className="bg-green-600 px-6 py-2 rounded-full font-semibold text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
                             >
                                 {uploading ? 'Saving...' : 'Save Changes'}
                             </button>
                             <button 
                                 onClick={() => setIsEditing(false)}
-                                className="bg-zinc-600 px-6 py-2 rounded-full font-semibold hover:bg-zinc-700"
+                                className="bg-secondary px-6 py-2 rounded-full font-semibold text-secondary-foreground hover:bg-secondary/80 transition-colors"
                             >
                                 Cancel
                             </button>
@@ -271,7 +282,7 @@ function ProfileContent() {
                     )}
                      <button 
                         onClick={() => router.push('/home')}
-                        className="bg-zinc-800 px-6 py-2 rounded-full font-semibold hover:bg-zinc-700"
+                        className="bg-secondary px-6 py-2 rounded-full font-semibold text-secondary-foreground hover:bg-secondary/80 transition-colors border border-border"
                     >
                         Back Home
                     </button>

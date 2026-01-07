@@ -34,10 +34,10 @@ export default function FeedItem({ user }: FeedItemProps) {
     if (!currentPhoto) return null; // Should not happen if filtered correctly
 
     return (
-        <article className="flex flex-col bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden mb-8">
+        <article className="flex flex-col bg-card border border-border rounded-lg overflow-hidden mb-8 shadow-sm">
             {/* Header */}
-            <div className="flex items-center gap-3 p-3">
-                <div className="relative w-8 h-8 rounded-full overflow-hidden border border-zinc-700 bg-zinc-800">
+            <div className="flex items-center gap-3 p-3 bg-secondary/30">
+                <div className="relative w-8 h-8 rounded-full overflow-hidden border border-border bg-muted">
                     {user.avatar ? (
                          <Image 
                             src={user.avatar} 
@@ -46,16 +46,17 @@ export default function FeedItem({ user }: FeedItemProps) {
                             className="object-cover"
                         />
                     ) : (
-                        <div className="w-full h-full flex items-center justify-center text-xs text-zinc-500 font-bold">
+                        <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground font-bold">
                             {user.username?.[0]?.toUpperCase()}
                         </div>
                     )}
                 </div>
-                <span className="font-semibold text-white text-sm">{user.username}</span>
+                <span className="font-semibold text-foreground text-sm">{user.username}</span>
             </div>
 
             {/* Media Carousel */}
-            <div className="w-full relative aspect-[4/5] bg-black group">
+            <div className="w-full relative aspect-[4/5] bg-black group"> 
+                {/* Keep backend black for media to standout, or use bg-muted */}
                 <Image 
                     src={currentPhoto.url} 
                     alt={`${user.username} photo`} 
@@ -90,7 +91,7 @@ export default function FeedItem({ user }: FeedItemProps) {
                             {user.photos.map((_, idx) => (
                                 <div 
                                     key={idx} 
-                                    className={`w-1.5 h-1.5 rounded-full transition-colors ${idx === currentPhotoIndex ? 'bg-white' : 'bg-white/40'}`}
+                                    className={`w-1.5 h-1.5 rounded-full transition-colors ${idx === currentPhotoIndex ? 'bg-primary' : 'bg-white/40'}`}
                                 />
                             ))}
                         </div>
@@ -99,8 +100,8 @@ export default function FeedItem({ user }: FeedItemProps) {
             </div>
 
             {/* Actions */}
-            <div className="flex flex-col p-4 gap-2">
-                 <div className="flex gap-4 text-white">
+            <div className="flex flex-col p-4 gap-2 bg-card">
+                 <div className="flex gap-4 text-foreground">
                     <button className="hover:text-red-500 transition">
                         <Heart className="w-6 h-6" />
                     </button>
@@ -114,8 +115,8 @@ export default function FeedItem({ user }: FeedItemProps) {
                 
                 {/* Caption / Bio */}
                 <div className="text-sm">
-                    <span className="font-semibold text-white mr-2">{user.username}</span>
-                    <span className="text-zinc-300">{user.bio || 'No bio yet.'}</span>
+                    <span className="font-semibold text-foreground mr-2">{user.username}</span>
+                    <span className="text-muted-foreground">{user.bio || 'No bio yet.'}</span>
                 </div>
             </div>
         </article>

@@ -326,9 +326,10 @@ exports.registerDetails = async (req, res) => {
         const user = await User.findById(req.user.id);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
-        if (user.is_profile_complete) {
-            return res.status(403).json({ message: 'Profile already completed. Please use Edit Profile.' });
-        }
+        // ALLOW UPDATES: Removed the check that blocked updates if profile was already complete.
+        // if (user.is_profile_complete) {
+        //    return res.status(403).json({ message: 'Profile already completed. Please use Edit Profile.' });
+        // }
 
         user.username = username;
         if (first_name) user.first_name = first_name;

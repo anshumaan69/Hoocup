@@ -92,37 +92,37 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white p-8">
+    <div className="min-h-screen bg-background text-foreground p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-                    <LayoutDashboard className="text-blue-500" />
+                    <LayoutDashboard className="text-primary" />
                     Admin Dashboard
                 </h1>
-                <p className="text-zinc-400 mt-1">Manage users and platform settings</p>
+                <p className="text-muted-foreground mt-1">Manage users and platform settings</p>
             </div>
             
             <div className="flex items-center gap-3">
                  <button 
                     onClick={() => router.push('/home')}
-                    className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg font-medium transition-colors flex items-center gap-2"
+                    className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg font-medium transition-colors flex items-center gap-2"
                 >
                     <Home size={18} />
                     Go to App
                 </button>
                  <button 
                     onClick={handleLogout}
-                    className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg font-medium transition-colors flex items-center gap-2"
+                    className="px-4 py-2 bg-destructive/10 hover:bg-destructive/20 text-destructive border border-destructive/20 rounded-lg font-medium transition-colors flex items-center gap-2"
                 >
                     <LogOut size={18} />
                     Logout
                 </button>
                 <button 
                     onClick={() => setIsCreateModalOpen(true)}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                    className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors flex items-center gap-2 shadow-lg shadow-primary/20"
                 >
                     <Plus size={18} />
                     Create User
@@ -132,13 +132,13 @@ export default function AdminDashboard() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl">
+            <div className="bg-card border border-border p-6 rounded-xl shadow-sm">
                 <div className="flex items-center justify-between">
                     <div>
-                        <p className="text-sm font-medium text-zinc-400">Total Users</p>
-                        <p className="text-2xl font-bold mt-1">{stats.totalUsers}</p>
+                        <p className="text-sm font-medium text-muted-foreground">Total Users</p>
+                        <p className="text-2xl font-bold mt-1 text-foreground">{stats.totalUsers}</p>
                     </div>
-                    <div className="p-3 bg-zinc-800 rounded-lg text-zinc-400">
+                    <div className="p-3 bg-primary/10 rounded-lg text-primary">
                         <Users size={20} />
                     </div>
                 </div>
@@ -149,13 +149,13 @@ export default function AdminDashboard() {
         {/* User Management */}
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">User Management</h2>
+                <h2 className="text-xl font-semibold text-foreground">User Management</h2>
                 <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                     <input 
                         type="text" 
                         placeholder="Search users..." 
-                        className="pl-9 pr-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm focus:outline-none focus:border-blue-500 w-64 transition-colors"
+                        className="pl-9 pr-4 py-2 bg-input border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary w-64 transition-all placeholder:text-muted-foreground"
                     />
                 </div>
             </div>

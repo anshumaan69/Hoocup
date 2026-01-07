@@ -46,29 +46,29 @@ function HomeContent() {
     }
 
     return (
-        <div className="flex min-h-screen flex-col items-center bg-black text-white">
-            <header className="sticky top-0 z-50 w-full border-b border-zinc-800 bg-black/80 backdrop-blur-md p-4 flex justify-between items-center">
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 text-transparent bg-clip-text">
+        <div className="flex min-h-screen flex-col items-center bg-background text-foreground">
+            <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-md p-4 flex justify-between items-center supports-[backdrop-filter]:bg-background/60">
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-500 to-purple-600 text-transparent bg-clip-text">
                     Hoocup
                 </h1>
                 <div className="flex gap-4">
                     {user.role === 'admin' && (
                         <button 
                             onClick={() => router.push('/admin')}
-                            className="text-sm font-semibold text-purple-400 hover:text-purple-300 transition"
+                            className="text-sm font-semibold text-primary/80 hover:text-primary transition"
                         >
                             Admin Panel
                         </button>
                     )}
                     <button 
                          onClick={() => router.push(`/${user.username}`)}
-                         className="text-sm font-semibold text-zinc-300 hover:text-white transition"
+                         className="text-sm font-semibold text-muted-foreground hover:text-foreground transition"
                      >
                          My Profile
                      </button>
                     <button 
                         onClick={handleLogout}
-                        className="text-sm font-semibold text-red-500 hover:text-red-400 transition"
+                        className="text-sm font-semibold text-destructive hover:text-destructive/80 transition"
                     >
                         Logout
                     </button>
