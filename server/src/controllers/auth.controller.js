@@ -33,50 +33,45 @@ const generateTokens = (userId) => {
 
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
-const setCookies = (res, accessToken, refreshToken) => {
+const getCookieOptions = () => {
     const isProd = process.env.NODE_ENV === 'production';
-    
-    // Access Token (Short-lived)
-    res.cookie('access_token', accessToken, {
+    return {
         httpOnly: true,
         secure: isProd,
-        sameSite: isProd ? 'none' : 'lax', // Must be 'none' for cross-site cookie if frontend/backend are on diff domains
-        maxAge: 15 * 60 * 1000, // 15 mins
+        sameSite: 'lax', // Reliable with Proxy
         path: '/'
+    };
+};
+
+const setCookies = (res, accessToken, refreshToken) => {
+    const options = getCookieOptions();
+
+    // Access Token (Short-lived)
+    res.cookie('access_token', accessToken, {
+        ...options,
+        maxAge: 15 * 60 * 1000 // 15 mins
     });
 
     // Refresh Token (Long-lived)
     res.cookie('refresh_token', refreshToken, {
-        httpOnly: true,
-        secure: isProd,
-        sameSite: isProd ? 'none' : 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        path: '/' // Relaxed path for reliability
+        ...options,
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
     // CSRF Token (Readable by client)
+    const csrfOptions = { ...options, httpOnly: false };
     const csrfToken = crypto.randomBytes(32).toString('hex');
-    res.cookie('csrf_token', csrfToken, {
-        httpOnly: false, // Must be readable by client JS
-        secure: isProd,
-        sameSite: isProd ? 'none' : 'lax',
-        path: '/',
-    });
+    res.cookie('csrf_token', csrfToken, csrfOptions);
 };
 
 const clearCookies = (res) => {
-    const isProd = process.env.NODE_ENV === 'production';
-    const cookieOptions = {
-        httpOnly: true,
-        secure: isProd,
-        sameSite: isProd ? 'none' : 'lax',
-        path: '/'
-    };
-
-    res.clearCookie('access_token', cookieOptions);
-    res.clearCookie('refresh_token', cookieOptions);
-    res.clearCookie('csrf_token', { ...cookieOptions, httpOnly: false }); 
-    res.clearCookie('token'); // Clear legacy cookie just in case
+    const options = getCookieOptions();
+    
+    // Clear all potential cookies including legacy ones
+    res.clearCookie('access_token', options);
+    res.clearCookie('refresh_token', options);
+    res.clearCookie('csrf_token', { ...options, httpOnly: false }); 
+    res.clearCookie('token', options); 
 };
 
 // --- Controllers ---

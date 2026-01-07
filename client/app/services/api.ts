@@ -44,6 +44,13 @@ api.interceptors.response.use(
                     /* Ignore logout error */ 
                 }
                 
+                // FORCE CLEANUP: Manually clear cookies if API failed to do so
+                if (typeof document !== 'undefined') {
+                    document.cookie = 'access_token=; Max-Age=0; path=/;';
+                    document.cookie = 'refresh_token=; Max-Age=0; path=/;';
+                    document.cookie = 'csrf_token=; Max-Age=0; path=/;';
+                }
+
                 if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
                     window.location.href = '/login'; 
                 }

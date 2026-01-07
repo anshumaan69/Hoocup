@@ -45,10 +45,25 @@ export default function AdminDashboard() {
 
   const handleLogout = async () => {
     try {
-        await api.post('/logout');
+        await api.post('/auth/logout');
+        
+        // Force client-side cleanup
+        if (typeof document !== 'undefined') {
+            document.cookie = 'access_token=; Max-Age=0; path=/;';
+            document.cookie = 'refresh_token=; Max-Age=0; path=/;';
+            document.cookie = 'csrf_token=; Max-Age=0; path=/;';
+        }
+        
         router.push('/login'); 
     } catch (error) {
         console.error('Logout failed', error);
+        // Force logout anyway
+         if (typeof document !== 'undefined') {
+            document.cookie = 'access_token=; Max-Age=0; path=/;';
+            document.cookie = 'refresh_token=; Max-Age=0; path=/;';
+            document.cookie = 'csrf_token=; Max-Age=0; path=/;';
+        }
+        router.push('/login');
     }
   };
 

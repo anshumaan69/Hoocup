@@ -20,10 +20,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // If trying to access auth pages while logged in
-  if (pathname === '/login' && token) {
-      return NextResponse.redirect(new URL('/home', request.url));
-  }
+  // We allow access to /login even if token exists. 
+  // This lets users re-login if their session is "stuck" or invalid.
+  // if (pathname === '/login' && token) {
+  //     return NextResponse.redirect(new URL('/home', request.url));
+  // }
 
   return NextResponse.next();
 }

@@ -1,4 +1,5 @@
 const express = require('express');
+const http = require('http');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -42,5 +43,18 @@ app.use('/api/users', userRoutes);
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
+
+    // KEEPALIVE HACK: Ping server every 14 minutes to prevent Render from sleeping
+    setInterval(() => {
+        // Use local loopback to keep the process active
+        const url = `http://localhost:${PORT}`;
+        console.log(`[KeepAlive] Pinging ${url}`);
+        http.get(url, (res) => {
+            // Consume data to free memory
+            res.resume();
+        }).on('error', (err) => {
+            console.error(`[KeepAlive] Error: ${err.message}`);
+        });
+    }, 14 * 60 * 1000); // 14 minutes
 });
 
