@@ -27,6 +27,11 @@ export default function UserList({ users, page, pages, setPage, loading }: UserL
       return <div className="text-center py-12 text-zinc-500">Loading users...</div>;
   }
 
+  if (!users || !Array.isArray(users)) {
+      console.error('UserList Error: users prop is not an array', users);
+      return <div className="text-center py-12 text-zinc-500">Error loading users.</div>;
+  }
+
   return (
     <div className="w-full bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
       <div className="overflow-x-auto">

@@ -23,8 +23,9 @@ export default function AdminDashboard() {
       // Default baseURL is /api/auth. Using .. to traverse up.
       // Final URL: /api/auth/../admin/users -> /api/admin/users
       const { data } = await api.get(`../admin/users?page=${page}&limit=10`);
-      console.log('DEBUG: Admin Dashboard Users:', data.data);
-      setUsers(data.data);
+      console.log('DEBUG: FULL API RESPONSE:', data); // Inspect structure
+      console.log('DEBUG: Users Array:', data.data);
+      setUsers(data.data || []); // Safety fallback
       setPages(data.pages);
       setStats({ 
           totalUsers: data.total,
