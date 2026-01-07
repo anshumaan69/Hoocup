@@ -39,10 +39,10 @@ export default function UserList({ users, page, pages, setPage, loading, onDelet
   }
 
   return (
-    <div className="w-full bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+    <div className="w-full bg-card border border-border rounded-xl overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm text-zinc-400">
-          <thead className="bg-zinc-800/50 text-zinc-200 uppercase text-xs font-semibold">
+        <table className="w-full text-left text-sm text-muted-foreground">
+          <thead className="bg-secondary/50 text-foreground uppercase text-xs font-semibold">
             <tr>
               <th className="px-6 py-4">User</th>
               <th className="px-6 py-4">Contact</th>
@@ -52,37 +52,37 @@ export default function UserList({ users, page, pages, setPage, loading, onDelet
               <th className="px-6 py-4 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-800">
+          <tbody className="divide-y divide-border">
             {users.length === 0 ? (
                 <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">No users found</td>
+                    <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">No users found</td>
                 </tr>
             ) : (
                 users.map((user) => (
-                    <tr key={user._id} className="hover:bg-zinc-800/30 transition-colors">
+                    <tr key={user._id} className="hover:bg-secondary/20 transition-colors">
                         <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-zinc-700 overflow-hidden flex-shrink-0">
+                            <div className="w-8 h-8 rounded-full bg-secondary overflow-hidden flex-shrink-0">
                                 {user.avatar ? (
                                     <img src={user.avatar} alt={user.username} className="w-full h-full object-cover" />
                                 ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-xs font-bold text-zinc-500">
+                                    <div className="w-full h-full flex items-center justify-center text-xs font-bold text-muted-foreground">
                                         {user.username?.[0]?.toUpperCase() || '?'}
                                     </div>
                                 )}
                             </div>
-                            <span className="font-medium text-zinc-200">{user.username}</span>
+                            <span className="font-medium text-foreground">{user.username}</span>
                         </div>
                         </td>
                         <td className="px-6 py-4">
                         <div className="flex flex-col">
                             {user.email && <span>{user.email}</span>}
-                            {user.phone && <span className="text-xs text-zinc-500">{user.phone}</span>}
+                            {user.phone && <span className="text-xs text-muted-foreground">{user.phone}</span>}
                         </div>
                         </td>
                         <td className="px-6 py-4">
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            user.role === 'admin' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                            user.role === 'admin' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-primary/10 text-primary border border-primary/20'
                         }`}>
                             {user.role}
                         </span>
@@ -99,7 +99,7 @@ export default function UserList({ users, page, pages, setPage, loading, onDelet
                             {/* Account Status */}
                             {user.status && user.status !== 'active' && (
                                 <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium w-fit ${
-                                    user.status === 'banned' ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-orange-500/10 text-orange-500 border border-orange-500/20'
+                                    user.status === 'banned' ? 'bg-destructive/10 text-destructive border border-destructive/20' : 'bg-orange-500/10 text-orange-500 border border-orange-500/20'
                                 }`}>
                                     {user.status.toUpperCase()}
                                 </span>
@@ -118,14 +118,14 @@ export default function UserList({ users, page, pages, setPage, loading, onDelet
                                                 <button 
                                                     onClick={() => onUpdateStatus(user._id, 'banned')}
                                                     title="Ban for 30 days"
-                                                    className="p-1.5 hover:bg-red-500/10 text-zinc-400 hover:text-red-500 rounded-md transition-colors"
+                                                    className="p-1.5 hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded-md transition-colors"
                                                 >
                                                     <Ban size={16} />
                                                 </button>
                                                 <button 
                                                     onClick={() => onUpdateStatus(user._id, 'suspended')}
                                                     title="Suspend Indefinitely"
-                                                    className="p-1.5 hover:bg-orange-500/10 text-zinc-400 hover:text-orange-500 rounded-md transition-colors"
+                                                    className="p-1.5 hover:bg-orange-500/10 text-muted-foreground hover:text-orange-500 rounded-md transition-colors"
                                                 >
                                                     <PauseCircle size={16} />
                                                 </button>
@@ -134,7 +134,7 @@ export default function UserList({ users, page, pages, setPage, loading, onDelet
                                             <button 
                                                 onClick={() => onUpdateStatus(user._id, 'active')}
                                                 title="Reactivate Account"
-                                                className="p-1.5 hover:bg-green-500/10 text-zinc-400 hover:text-green-500 rounded-md transition-colors"
+                                                className="p-1.5 hover:bg-green-500/10 text-muted-foreground hover:text-green-500 rounded-md transition-colors"
                                             >
                                                 <PlayCircle size={16} />
                                             </button>
@@ -143,7 +143,7 @@ export default function UserList({ users, page, pages, setPage, loading, onDelet
                                         <button 
                                             onClick={() => onDelete(user._id)}
                                             title="Delete User"
-                                            className="p-1.5 hover:bg-red-500/10 text-zinc-400 hover:text-red-500 rounded-md transition-colors"
+                                            className="p-1.5 hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded-md transition-colors"
                                         >
                                             <Trash2 size={16} />
                                         </button>
@@ -159,22 +159,22 @@ export default function UserList({ users, page, pages, setPage, loading, onDelet
       </div>
       
       {/* Pagination */}
-      <div className="px-6 py-4 border-t border-zinc-800 flex items-center justify-between">
-        <span className="text-xs text-zinc-500">
+      <div className="px-6 py-4 border-t border-border flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">
             Page {page} of {pages}
         </span>
         <div className="flex items-center gap-2">
             <button 
                 onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page === 1}
-                className="p-1 rounded-md hover:bg-zinc-800 disabled:opacity-50 disabled:hover:bg-transparent transition-colors"
+                className="p-1 rounded-md hover:bg-secondary disabled:opacity-50 disabled:hover:bg-transparent transition-colors text-foreground"
             >
                 <ChevronLeft size={16} />
             </button>
             <button 
                 onClick={() => setPage(Math.min(pages, page + 1))}
                 disabled={page === pages}
-                className="p-1 rounded-md hover:bg-zinc-800 disabled:opacity-50 disabled:hover:bg-transparent transition-colors"
+                className="p-1 rounded-md hover:bg-secondary disabled:opacity-50 disabled:hover:bg-transparent transition-colors text-foreground"
             >
                 <ChevronRight size={16} />
             </button>
