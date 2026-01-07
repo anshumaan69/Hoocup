@@ -13,7 +13,7 @@ router.post('/google', googleAuth);
 router.post('/send-otp', rateLimiterMiddleware, sendOtp);
 router.post('/verify-otp', verifyOtp);
 router.post('/refresh', refreshToken); // New endpoint for rotation
-router.get('/users/:username', getUserByUsername);
+// router.get('/users/:username', getUserByUsername); // Moved to user.routes.js
 
 // Protected
 router.post('/register-details', protect, csrfProtection, registerDetails);
