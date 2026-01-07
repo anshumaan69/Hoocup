@@ -5,6 +5,8 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const cloudinary = require('../config/cloudinary');
+const sharp = require('sharp');
 
 const client = new OAuth2Client(
     process.env.GOOGLE_CLIENT_ID,
@@ -296,14 +298,24 @@ exports.registerDetails = async (req, res) => {
         const user = await User.findById(req.user.id);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
-        user.username = username;
-        user.first_name = first_name;
-        user.last_name = last_name;
-        user.dob = dob;
-        if (avatar) user.avatar = avatar;
-        if (bio !== undefined) user.bio = bio;
-        user.is_profile_complete = true;
+        if (user.is_profile_complete) {
+            return res.status(403).json({ message: 'Profile already completed. Please use Edit Profile.' });
+        }
 
+        user.username = username;
+        if (first_name) user.first_name = first_name;
+        if (last_name) user.last_name = last_name;
+        user.dob = dob;
+        if (bio) user.bio = bio;
+        
+        // If avatar is provided (e.g. from the selected photo in register flow)
+        // ensure we update both fields for consistency
+        if (avatar) {
+            user.avatar = avatar;
+            user.profilePhoto = avatar; 
+        }
+
+        user.is_profile_complete = true;
         await user.save();
         res.status(200).json({ message: 'Profile updated successfully', user });
     } catch (error) {
@@ -356,5 +368,145 @@ exports.getMe = async (req, res) => {
         res.status(200).json(user);
     } catch (error) {
          res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+// --- Photo Management ---
+
+exports.uploadPhotos = async (req, res) => {
+    try {
+        const files = req.files;
+        if (!files || files.length === 0) {
+            return res.status(400).json({ message: 'No files uploaded' });
+        }
+
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        // Initialize photos if undefined (backward compatibility)
+        if (!user.photos) user.photos = [];
+
+        if (user.photos.length + files.length > 4) {
+             return res.status(400).json({ message: `Max 4 photos allowed. You can upload ${4 - user.photos.length} more.` });
+        }
+
+        const uploadPromises = files.map(async (file) => {
+            // value-add: compress image
+            const optimizedBuffer = await sharp(file.buffer)
+                .resize(800, 800, { fit: 'cover' })
+                .jpeg({ quality: 80 })
+                .toBuffer();
+
+            // Upload via stream
+            return new Promise((resolve, reject) => {
+                const uploadStream = cloudinary.uploader.upload_stream(
+                    { folder: 'hoocup_user_photos', resource_type: 'image' },
+                    (error, result) => {
+                        if (error) reject(error);
+                        else resolve(result);
+                    }
+                );
+                uploadStream.end(optimizedBuffer);
+            });
+        });
+
+        const results = await Promise.all(uploadPromises);
+
+        // Add to user photos
+        results.forEach((result, index) => {
+            user.photos.push({
+                url: result.secure_url,
+                publicId: result.public_id,
+                isProfile: false,
+                order: user.photos.length, // simple append order
+            });
+        });
+
+        // Auto-set profile photo if first upload or none exists
+        if (!user.profilePhoto || user.photos.length === results.length) {
+            // Find the one we just added (if it was the first ever)
+             // Simpler: Just ensure one is set to true
+             const hasProfile = user.photos.some(p => p.isProfile);
+             if (!hasProfile && user.photos.length > 0) {
+                 user.photos[0].isProfile = true;
+                 user.profilePhoto = user.photos[0].url;
+                 if (user.avatar === null) user.avatar = user.photos[0].url; // Backwards compat
+             }
+        }
+
+        }
+
+        await user.save();
+        res.status(200).json({ message: 'Photos uploaded', photos: user.photos, profilePhoto: user.profilePhoto });
+
+    } catch (error) {
+        console.error('Photo Upload Error:', error);
+        res.status(500).json({ message: 'Image upload failed' });
+    }
+};
+
+exports.setProfilePhoto = async (req, res) => {
+    const { photoId } = req.body;
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const photoExists = user.photos.id(photoId);
+        if (!photoExists) return res.status(404).json({ message: 'Photo not found' });
+
+        // Update flags
+        user.photos.forEach(photo => {
+            if (photo._id.toString() === photoId) {
+                photo.isProfile = true;
+                user.profilePhoto = photo.url;
+                user.avatar = photo.url; // Backwards compat
+            } else {
+                photo.isProfile = false;
+            }
+        });
+
+        await user.save();
+        res.status(200).json({ message: 'Profile photo updated', profilePhoto: user.profilePhoto, photos: user.photos });
+
+    } catch (error) {
+        console.error('Set Profile Photo Error:', error);
+        res.status(500).json({ message: 'Failed to update profile photo' });
+    }
+};
+
+exports.deletePhoto = async (req, res) => {
+    const { photoId } = req.params;
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const photo = user.photos.id(photoId);
+        if (!photo) return res.status(404).json({ message: 'Photo not found' });
+
+        // Delete from Cloudinary
+        await cloudinary.uploader.destroy(photo.publicId);
+
+        // Remove from DB
+        const isProfile = photo.isProfile;
+        user.photos.pull(photoId);
+
+        // Fallback if deleted photo was profile photo
+        if (isProfile) {
+            user.profilePhoto = null;
+            user.avatar = null;
+
+            if (user.photos.length > 0) {
+                user.photos[0].isProfile = true;
+                user.profilePhoto = user.photos[0].url;
+                user.avatar = user.photos[0].url;
+            }
+        }
+
+        await user.save();
+        res.status(200).json({ message: 'Photo deleted', photos: user.photos, profilePhoto: user.profilePhoto });
+
+    } catch (error) {
+        console.error('Delete Photo Error:', error);
+        res.status(500).json({ message: 'Failed to delete photo' });
     }
 };

@@ -1,7 +1,7 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
-const cookieParser = require('cookie-parser');
+const cookieParser = require('cookie-parser');//This will make cookies available as req.cookies
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth.routes');
 

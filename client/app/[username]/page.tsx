@@ -3,6 +3,8 @@
 import { Suspense, useEffect, useState } from 'react';
 import api from '../services/api';
 import { useRouter, useParams } from 'next/navigation';
+import PhotoUploadGrid from '../components/PhotoUploadGrid';
+import PhotoCard from '../components/PhotoCard';
 
 function ProfileContent() {
     const { username } = useParams();
@@ -23,6 +25,16 @@ function ProfileContent() {
     const [avatar, setAvatar] = useState<File | null>(null);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
+    
+    // Photo State
+    const [photos, setPhotos] = useState<any[]>([]);
+
+    const updateProfilePhotoLocal = (url: string) => {
+        // Update the avatar preview immediately if a new profile photo is set
+        setAvatarPreview(url);
+        // Also update the profile state to reflected confirmed change
+        setProfile((prev: any) => ({ ...prev, avatar: url }));
+    };
 
     useEffect(() => {
         // Fetch Profile Data
@@ -37,6 +49,9 @@ function ProfileContent() {
                     dob: res.data.dob ? res.data.dob.split('T')[0] : '',
                     bio: res.data.bio || '',
                  });
+                 if (res.data.photos) {
+                     setPhotos(res.data.photos);
+                 }
              } catch (error) {
                  console.error('Failed to fetch profile', error);
              }
@@ -143,11 +158,11 @@ function ProfileContent() {
                 
                 {/* Header / Avatar */}
                 <div className="flex flex-col items-center mb-8">
-                     <div className="w-32 h-32 rounded-full overflow-hidden mb-4 border-4 border-zinc-800 relative group">
+                     <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-zinc-800 shadow-xl mb-4 group">
                         <img 
-                            src={avatarPreview || profile.avatar || '/default-avatar.png'} 
+                            src={avatarPreview || profile.profilePhoto || profile.avatar || '/default-avatar.png'} 
                             alt={profile.username} 
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover transition-transform group-hover:scale-110"
                             onError={(e) => { e.currentTarget.src = `https://ui-avatars.com/api/?name=${profile.first_name}&background=random`; }}
                         />
                         {isEditing && (
@@ -201,6 +216,30 @@ function ProfileContent() {
                             <span className="text-lg">{profile.dob ? new Date(profile.dob).toLocaleDateString() : 'N/A'}</span>
                          )}
                     </div>
+                </div>
+
+                {/* Photos Section */}
+                <div className="mb-8 w-full">
+                    <h2 className="text-xl font-semibold mb-4 text-zinc-300">Photos</h2>
+                    {isEditing ? (
+                        <PhotoUploadGrid 
+                            photos={photos} 
+                            setPhotos={setPhotos} 
+                            updateProfilePhotoLocal={updateProfilePhotoLocal} 
+                        />
+                    ) : (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+                            {photos.length > 0 ? photos.map((photo, idx) => (
+                                <PhotoCard 
+                                    key={photo._id || idx} 
+                                    photo={photo} 
+                                    readOnly={true} 
+                                />
+                            )) : (
+                                <p className="text-zinc-500 col-span-full text-center py-4 bg-zinc-800/20 rounded-lg">No photos uploaded</p>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Actions */}

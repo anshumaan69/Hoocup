@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import api from '../../services/api';
 import { useRouter, useSearchParams } from 'next/navigation';
+import PhotoUploadGrid from '@/app/components/PhotoUploadGrid';
 
 export function RegisterDetailsContent() {
     const router = useRouter();
@@ -15,9 +16,7 @@ export function RegisterDetailsContent() {
         bio: ''
     });
 
-    const [avatar, setAvatar] = useState<File | null>(null);
-    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-    const [existingAvatarUrl, setExistingAvatarUrl] = useState<string | null>(null);
+    const [photos, setPhotos] = useState<any[]>([]); // Using any[] for simplicity with the import interface, or duplicate interface
     const [uploading, setUploading] = useState(false);
 
     // Fetch existing user data (pre-fill from Google)
@@ -25,16 +24,26 @@ export function RegisterDetailsContent() {
         const fetchUserData = async () => {
             try {
                 const { data } = await api.get('/me');
+                if (data.is_profile_complete) {
+                     // Prevent re-entry to registration details if already complete
+                     // Redirect to home or profile
+                     router.push('/home'); 
+                     return;
+                }
+
                 setFormData(prev => ({
                     ...prev,
                     first_name: data.first_name || '',
                     last_name: data.last_name || '',
-                    // username: data.username // Don't pre-fill username if we want them to choose a unique one, or do? 
-                    // Usually username is not set yet if they are here.
+                    bio: data.bio || ''
                 }));
-                if (data.avatar) {
-                    setAvatarPreview(data.avatar);
-                    setExistingAvatarUrl(data.avatar);
+                
+                if (data.photos && data.photos.length > 0) {
+                    setPhotos(data.photos);
+                } else if (data.avatar) {
+                    // Backwards compatibility presentation if no photos array yet but avatar exists
+                    // We don't push it to photos array here to avoid double upload, 
+                    // unless we want to migrate it. For now, let's assume new flow starts fresh or utilizes existing photos.
                 }
             } catch (error) {
                 console.error('Failed to fetch user data for pre-fill', error);
@@ -43,32 +52,9 @@ export function RegisterDetailsContent() {
         fetchUserData();
     }, []);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
-
-    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        try {
-            validateImage(file);
-            setAvatar(file);
-            setAvatarPreview(URL.createObjectURL(file));
-        } catch (error: any) {
-            alert(error.message);
-        }
-    };
-
-    function validateImage(file: File) {
-      if (!file.type.startsWith("image/")) {
-        throw new Error("Only images allowed");
-      }
-    
-      if (file.size > 5 * 1024 * 1024) {
-        throw new Error("Max 5MB allowed");
-      }
-    }
 
     const handleGenerateUsername = () => {
         const base = formData.first_name ? formData.first_name.toLowerCase().replace(/\s/g, '') : 'user';
@@ -76,20 +62,10 @@ export function RegisterDetailsContent() {
         setFormData({ ...formData, username: `${base}${random}` });
     };
 
-    async function compressImage(file: File): Promise<Blob> {
-      const bitmap = await createImageBitmap(file);
-      const canvas = document.createElement("canvas");
-      canvas.width = 512;
-      canvas.height = 512;
-      const ctx = canvas.getContext("2d")!;
-      // Draw white background mainly for transparent PNGs converted to WebP
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, 512, 512);
-      ctx.drawImage(bitmap, 0, 0, 512, 512);
-      return new Promise((resolve) => {
-        canvas.toBlob((blob) => resolve(blob!), "image/webp", 0.8);
-      });
-    }
+    const updateProfilePhotoLocal = (url: string) => {
+        // This function is passed to the grid to update local state if needed
+        // but currently we just rely on the photos array state being updated by the grid
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -111,17 +87,17 @@ export function RegisterDetailsContent() {
         }
 
         try {
-             let avatarUrl = existingAvatarUrl || null;
-             if (avatar) {
-                 const compressedBlob = await compressImage(avatar);
-                 const formDataUpload = new FormData();
-                 formDataUpload.append("avatar", compressedBlob);
-                 
-                 const res = await api.post('/avatar', formDataUpload, {
-                     headers: { 'Content-Type': 'multipart/form-data' }
-                 });
-                 avatarUrl = res.data.avatar;
-             }
+             // photos are already uploaded via the grid component.
+             // We just need to submit the rest of the details.
+             // The backend will know the current profile photo from the user model.
+             // However, for safety/explicitness, we could pass the current profile photo URL,
+             // but the controller logic for register-details mostly updates text fields now
+             // if we rely on the photo management controllers for photos.
+             // Wait, the registerDetails controller accepts 'avatar' field.
+             // We should pass the currently selected profile photo as 'avatar' to ensure it syncs 
+             // if the backend logic depends on it in registerDetails (it does: `if (avatar) user.avatar = avatar;`)
+             
+             const profilePhoto = photos.find(p => p.isProfile)?.url;
 
              await api.post('/register-details', { 
                  username: formData.username,
@@ -129,7 +105,7 @@ export function RegisterDetailsContent() {
                  last_name: formData.last_name,
                  dob: formData.dob,
                  bio: formData.bio,
-                 avatar: avatarUrl
+                 avatar: profilePhoto 
              });
              router.push('/home');
         } catch (error: any) {
@@ -144,25 +120,23 @@ export function RegisterDetailsContent() {
 
     return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-black text-white p-4">
-             <div className="w-full max-w-md border border-zinc-800 p-8 rounded-lg bg-zinc-900/50">
-                <h1 className="text-3xl font-bold mb-6 text-center">Complete Your Profile</h1>
-                <p className="text-zinc-400 mb-8 text-center">One last step to join the community.</p>
+             <div className="w-full max-w-2xl border border-zinc-800 p-8 rounded-lg bg-zinc-900/50">
+                <h1 className="text-3xl font-bold mb-2 text-center">Complete Your Profile</h1>
+                <p className="text-zinc-400 mb-8 text-center">Add your best photos and tell us about yourself.</p>
                 
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <form onSubmit={handleSubmit} className="flex flex-col gap-6">
                     
-                    {/* Avatar Selection */}
-                    <div className="flex flex-col items-center mb-4">
-                        <div className="w-24 h-24 rounded-full bg-zinc-800 mb-2 overflow-hidden border border-zinc-700 relative">
-                             {avatarPreview ? (
-                                <img src={avatarPreview} alt="Avatar Preview" className="w-full h-full object-cover" />
-                             ) : (
-                                <div className="flex items-center justify-center h-full text-zinc-500 text-xs">No Image</div>
-                             )}
-                        </div>
-                        <label className="cursor-pointer bg-zinc-800 px-3 py-1 rounded text-sm hover:bg-zinc-700">
-                            Upload Avatar
-                            <input type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} />
-                        </label>
+                    {/* Photo Grid Section */}
+                    <div className="flex flex-col gap-2">
+                        <label className="block text-sm font-medium text-zinc-300">Photos (Max 4)</label>
+                        <PhotoUploadGrid 
+                            photos={photos} 
+                            setPhotos={setPhotos} 
+                            updateProfilePhotoLocal={updateProfilePhotoLocal} 
+                        />
+                        <p className="text-xs text-zinc-500">
+                            Upload up to 4 photos. Click the star icon to set your main profile picture.
+                        </p>
                     </div>
 
                     <div className="flex gap-4">
@@ -218,7 +192,7 @@ export function RegisterDetailsContent() {
                             className="w-full p-2 rounded bg-zinc-800 border border-zinc-700 focus:outline-none focus:border-blue-500 text-white h-20 resize-none"
                             placeholder="Tell us a little about yourself..."
                             value={formData.bio}
-                            onChange={(e) => handleChange(e as any)}
+                            onChange={handleChange}
                             maxLength={150}
                         />
                     </div>
@@ -240,7 +214,7 @@ export function RegisterDetailsContent() {
                         disabled={uploading}
                         className="mt-4 bg-blue-600 text-white p-3 rounded font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
                     >
-                        {uploading ? 'Uploading...' : 'Finish Setup'}
+                        {uploading ? 'Processing...' : 'Finish Setup'}
                     </button>
                 </form>
              </div>
