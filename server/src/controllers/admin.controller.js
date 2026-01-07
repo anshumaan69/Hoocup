@@ -15,8 +15,6 @@ exports.getAllUsers = async (req, res) => {
             .skip(skip)
             .limit(limit);
 
-        console.log('DEBUG: Admin fetch users:', users);
-
         const total = await User.countDocuments();
 
         res.status(200).json({
@@ -82,5 +80,55 @@ exports.createUser = async (req, res) => {
             message: 'Server Error',
             error: error.message 
         });
+    }
+};
+// @desc    Delete user
+// @route   DELETE /api/admin/users/:id
+// @access  Private/Admin
+exports.deleteUser = async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        await user.deleteOne();
+        res.status(200).json({ message: 'User removed' });
+    } catch (error) {
+        console.error('Delete User Error:', error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+// @desc    Update user status (Ban/Suspend/Active)
+// @route   PATCH /api/admin/users/:id/status
+// @access  Private/Admin
+exports.updateUserStatus = async (req, res) => {
+    try {
+        const { status } = req.body; // 'active', 'banned', 'suspended'
+        const user = await User.findById(req.params.id);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        user.status = status;
+
+        if (status === 'banned') {
+            // Default 30 days ban
+            const banDate = new Date();
+            banDate.setDate(banDate.getDate() + 30);
+            user.banExpiresAt = banDate;
+        } else {
+            user.banExpiresAt = undefined;
+        }
+
+        await user.save();
+
+        res.status(200).json({ success: true, user });
+    } catch (error) {
+        console.error('Update Status Error:', error);
+        res.status(500).json({ message: 'Server Error' });
     }
 };

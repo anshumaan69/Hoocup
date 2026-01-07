@@ -47,6 +47,12 @@ export function LoginContent() {
             }
         } catch (error: any) {
             console.error('Verify OTP Failed', error);
+            
+            if (error.response?.status === 403) {
+                router.push(`/access-denied?message=${encodeURIComponent(error.response.data.message)}`);
+                return;
+            }
+
             const msg = error.response?.data?.message || 'Invalid OTP';
             const detail = error.response?.data?.error ? ` (${error.response.data.error})` : '';
             alert(msg + detail);

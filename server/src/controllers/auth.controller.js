@@ -119,6 +119,22 @@ exports.googleAuth = async (req, res) => {
              await user.save();
         }
 
+        // Check Status
+        if (user.status === 'suspended') {
+            return res.status(403).json({ message: 'Your account has been suspended by admin until further notice' });
+        }
+
+        if (user.status === 'banned') {
+            if (user.banExpiresAt && user.banExpiresAt > new Date()) {
+                const daysLeft = Math.ceil((user.banExpiresAt - new Date()) / (1000 * 60 * 60 * 24));
+                return res.status(403).json({ message: `You have been banned for next ${daysLeft} days` });
+            } else {
+                user.status = 'active';
+                user.banExpiresAt = undefined;
+                await user.save();
+            }
+        }
+
         const { accessToken, refreshToken } = generateTokens(user._id);
         
         // Save hashed refresh token
@@ -187,6 +203,23 @@ exports.verifyOtp = async (req, res) => {
             
             if (user) {
                 // LOGIN FLOW
+                
+                // Check Status
+                if (user.status === 'suspended') {
+                    return res.status(403).json({ message: 'Your account has been suspended by admin until further notice' });
+                }
+
+                if (user.status === 'banned') {
+                    if (user.banExpiresAt && user.banExpiresAt > new Date()) {
+                        const daysLeft = Math.ceil((user.banExpiresAt - new Date()) / (1000 * 60 * 60 * 24));
+                        return res.status(403).json({ message: `You have been banned for next ${daysLeft} days` });
+                    } else {
+                        user.status = 'active';
+                        user.banExpiresAt = undefined;
+                        await user.save();
+                    }
+                }
+
                 const { accessToken, refreshToken } = generateTokens(user._id);
                 user.refresh_token_hash = hashToken(refreshToken);
                 await user.save();

@@ -23,8 +23,6 @@ export default function AdminDashboard() {
       // Default baseURL is /api/auth. Using .. to traverse up.
       // Final URL: /api/auth/../admin/users -> /api/admin/users
       const { data } = await api.get(`../admin/users?page=${page}&limit=10`);
-      console.log('DEBUG: FULL API RESPONSE:', data); // Inspect structure
-      console.log('DEBUG: Users Array:', data.data);
       setUsers(data.data || []); // Safety fallback
       setPages(data.pages);
       setStats({ 
@@ -52,6 +50,30 @@ export default function AdminDashboard() {
         router.push('/login'); 
     } catch (error) {
         console.error('Logout failed', error);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
+    try {
+        await api.delete(`../admin/users/${userId}`);
+        // Optimistic update or refetch
+        setUsers(users.filter((u: any) => u._id !== userId));
+        alert('User deleted successfully');
+    } catch (error) {
+        console.error('Delete failed', error);
+        alert('Failed to delete user');
+    }
+  };
+
+  const handleUpdateStatus = async (userId: string, status: string) => {
+    try {
+        await api.patch(`../admin/users/${userId}/status`, { status });
+        // Refetch to get updated status and expiry
+        fetchUsers();
+    } catch (error) {
+        console.error('Status update failed', error);
+        alert('Failed to update user status');
     }
   };
 
@@ -129,7 +151,9 @@ export default function AdminDashboard() {
                 page={page} 
                 pages={pages} 
                 setPage={setPage} 
-                loading={loading} 
+                loading={loading}
+                onDelete={handleDeleteUser}
+                onUpdateStatus={handleUpdateStatus}
             />
         </div>
       </div>

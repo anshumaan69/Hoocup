@@ -15,9 +15,29 @@ const protect = async (req, res, next) => {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         req.user = await User.findById(decoded.id).select('-password');
+        
         if (!req.user) {
              return res.status(401).json({ message: 'User not found' });
         }
+
+        // Check Status
+        if (req.user.status === 'suspended') {
+            return res.status(403).json({ message: 'Your account has been suspended by admin until further notice' });
+        }
+
+        if (req.user.status === 'banned') {
+            if (req.user.banExpiresAt && req.user.banExpiresAt > new Date()) {
+                const daysLeft = Math.ceil((req.user.banExpiresAt - new Date()) / (1000 * 60 * 60 * 24));
+                return res.status(403).json({ message: `You have been banned for next ${daysLeft} days` });
+            } else {
+                // Ban expired, auto-activate (optional, or just allow login)
+                // Let's auto-activate for better UX
+                req.user.status = 'active';
+                req.user.banExpiresAt = undefined;
+                await req.user.save();
+            }
+        }
+
         next();
     } catch (error) {
         res.status(401).json({ message: 'Not authorized, token failed' });

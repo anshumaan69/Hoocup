@@ -124,6 +124,14 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    status: {
+      type: String,
+      enum: ['active', 'banned', 'suspended'],
+      default: 'active',
+    },
+    banExpiresAt: {
+      type: Date,
+    },
   },
   {
     timestamps: {

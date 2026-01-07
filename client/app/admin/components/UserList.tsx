@@ -9,6 +9,7 @@ interface User {
   email?: string;
   phone?: string;
   role: string;
+  status?: string; // 'active', 'banned', 'suspended'
   is_profile_complete: boolean;
   created_at: string;
   avatar: string;
@@ -20,9 +21,14 @@ interface UserListProps {
   pages: number;
   setPage: (page: number) => void;
   loading: boolean;
+  onDelete: (id: string) => void;
+  onUpdateStatus: (id: string, status: string) => void;
 }
 
-export default function UserList({ users, page, pages, setPage, loading }: UserListProps) {
+// Import icons
+import { Trash2, Ban, PauseCircle, PlayCircle } from 'lucide-react';
+
+export default function UserList({ users, page, pages, setPage, loading, onDelete, onUpdateStatus }: UserListProps) {
   if (loading) {
       return <div className="text-center py-12 text-zinc-500">Loading users...</div>;
   }
@@ -82,20 +88,68 @@ export default function UserList({ users, page, pages, setPage, loading }: UserL
                         </span>
                         </td>
                         <td className="px-6 py-4">
-                         <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${
-                            user.is_profile_complete ? 'bg-green-500/10 text-green-400' : 'bg-yellow-500/10 text-yellow-400'
-                        }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${user.is_profile_complete ? 'bg-green-400' : 'bg-yellow-400'}`} />
-                            {user.is_profile_complete ? 'Active' : 'Incomplete'}
-                        </span>
+                         <div className="flex flex-col gap-1">
+                            {/* Profile Status */}
+                             <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium w-fit ${
+                                user.is_profile_complete ? 'bg-green-500/10 text-green-400' : 'bg-yellow-500/10 text-yellow-400'
+                            }`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${user.is_profile_complete ? 'bg-green-400' : 'bg-yellow-400'}`} />
+                                {user.is_profile_complete ? 'Active' : 'Incomplete'}
+                            </span>
+                            {/* Account Status */}
+                            {user.status && user.status !== 'active' && (
+                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium w-fit ${
+                                    user.status === 'banned' ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-orange-500/10 text-orange-500 border border-orange-500/20'
+                                }`}>
+                                    {user.status.toUpperCase()}
+                                </span>
+                            )}
+                         </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                             {new Date(user.created_at).toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4 text-right">
-                        <button className="p-1 hover:bg-zinc-700 rounded-md text-zinc-400 hover:text-white transition-colors">
-                            <MoreHorizontal size={16} />
-                        </button>
+                            <div className="flex justify-end gap-2">
+                                {user.role !== 'admin' && (
+                                    <>
+                                        {user.status === 'active' || !user.status ? (
+                                            <>
+                                                <button 
+                                                    onClick={() => onUpdateStatus(user._id, 'banned')}
+                                                    title="Ban for 30 days"
+                                                    className="p-1.5 hover:bg-red-500/10 text-zinc-400 hover:text-red-500 rounded-md transition-colors"
+                                                >
+                                                    <Ban size={16} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => onUpdateStatus(user._id, 'suspended')}
+                                                    title="Suspend Indefinitely"
+                                                    className="p-1.5 hover:bg-orange-500/10 text-zinc-400 hover:text-orange-500 rounded-md transition-colors"
+                                                >
+                                                    <PauseCircle size={16} />
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <button 
+                                                onClick={() => onUpdateStatus(user._id, 'active')}
+                                                title="Reactivate Account"
+                                                className="p-1.5 hover:bg-green-500/10 text-zinc-400 hover:text-green-500 rounded-md transition-colors"
+                                            >
+                                                <PlayCircle size={16} />
+                                            </button>
+                                        )}
+                                        
+                                        <button 
+                                            onClick={() => onDelete(user._id)}
+                                            title="Delete User"
+                                            className="p-1.5 hover:bg-red-500/10 text-zinc-400 hover:text-red-500 rounded-md transition-colors"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </>
+                                )}
+                            </div>
                         </td>
                     </tr>
                 ))

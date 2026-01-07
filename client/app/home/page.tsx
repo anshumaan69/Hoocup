@@ -23,6 +23,10 @@ function HomeContent() {
             })
             .catch((err) => {
                 console.error('Failed to fetch user', err);
+                if (err.response?.status === 403) {
+                     router.push(`/access-denied?message=${encodeURIComponent(err.response.data.message)}`);
+                     return;
+                }
                 // No need to clear localStorage anymore
                 // API interceptor should have handled redirect to /login if refresh failed
             });

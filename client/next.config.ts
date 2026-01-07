@@ -48,7 +48,6 @@ const nextConfig = {
   },
   async rewrites() {
     const destinationUrl = getApiUrl();
-    console.log('API Proxy Destination:', destinationUrl); // Debug log during build/start
 
     return [
       {
