@@ -12,7 +12,7 @@ function HomeContent() {
 
     useEffect(() => {
         // Just fetch user. Interceptor handles 401->Refresh->Retry or Redirect
-        api.get('/me')
+        api.get('/auth/me')
             .then(res => {
                 const userData = res.data;
                 setUser(userData);
@@ -34,7 +34,7 @@ function HomeContent() {
 
     const handleLogout = async () => {
         try {
-            await api.post('/logout');
+            await api.post('/auth/logout');
             router.push('/login'); 
         } catch (error) {
             console.error('Logout failed', error);

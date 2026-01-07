@@ -20,9 +20,8 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       // Admin routes are at /api/admin. 
-      // Default baseURL is /api/auth. Using .. to traverse up.
-      // Final URL: /api/auth/../admin/users -> /api/admin/users
-      const { data } = await api.get(`../admin/users?page=${page}&limit=10`);
+      // BaseURL is /api. So we just need /admin/users
+      const { data } = await api.get(`/admin/users?page=${page}&limit=10`);
       setUsers(data.data || []); // Safety fallback
       setPages(data.pages);
       setStats({ 
@@ -56,7 +55,7 @@ export default function AdminDashboard() {
   const handleDeleteUser = async (userId: string) => {
     if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
     try {
-        await api.delete(`../admin/users/${userId}`);
+        await api.delete(`/admin/users/${userId}`);
         // Optimistic update or refetch
         setUsers(users.filter((u: any) => u._id !== userId));
         alert('User deleted successfully');
@@ -68,7 +67,7 @@ export default function AdminDashboard() {
 
   const handleUpdateStatus = async (userId: string, status: string) => {
     try {
-        await api.patch(`../admin/users/${userId}/status`, { status });
+        await api.patch(`/admin/users/${userId}/status`, { status });
         // Refetch to get updated status and expiry
         fetchUsers();
     } catch (error) {

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: '/api/auth', // Trace through Next.js rewrite proxy for cookies
+    baseURL: '/api', // Trace through Next.js rewrite proxy for cookies
     withCredentials: true,
     headers: {
         'Content-Type': 'application/json',

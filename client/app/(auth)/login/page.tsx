@@ -23,7 +23,7 @@ export function LoginContent() {
 
     const handleSendOtp = async () => {
         try {
-            await api.post('/send-otp', { phone });
+            await api.post('/auth/send-otp', { phone });
             setShowOtpInput(true);
             alert('OTP Sent!');
         } catch (error: any) {
@@ -36,7 +36,7 @@ export function LoginContent() {
 
     const handleVerifyOtp = async () => {
         try {
-            const res = await api.post('/verify-otp', { phone, code: otp });
+            const res = await api.post('/auth/verify-otp', { phone, code: otp });
             if (res.status === 200) {
                  // Cookies handled by server
                 if (res.data.user && res.data.user.is_profile_complete) {

@@ -18,7 +18,8 @@ export default function CreateUserModal({ isOpen, onClose, onUserCreated }: Crea
     first_name: '',
     last_name: '',
     role: 'user',
-    password: 'Password123!', // Default password for now as we don't have email flow yet to set it
+    dob: '', // Add DOB
+    password: 'Password123!',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -29,14 +30,28 @@ export default function CreateUserModal({ isOpen, onClose, onUserCreated }: Crea
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleAutogenerate = () => {
+      const randomId = Math.random().toString(36).substring(7);
+      setFormData({
+          username: `user_${randomId}`,
+          email: `user_${randomId}@example.com`,
+          phone: `+91${Math.floor(1000000000 + Math.random() * 9000000000)}`,
+          first_name: 'Auto',
+          last_name: 'User',
+          role: 'user',
+          dob: '2000-01-01',
+          password: 'Password123!'
+      });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      // Use relative path traversal to hit /api/admin/users
-      await api.post('../admin/users', formData);
+      // Fix: Absolute path to /admin/users (which is /api/admin/users)
+      await api.post('/admin/users', formData);
       onUserCreated();
       onClose();
       // Reset form
@@ -47,6 +62,7 @@ export default function CreateUserModal({ isOpen, onClose, onUserCreated }: Crea
         first_name: '',
         last_name: '',
         role: 'user',
+        dob: '',
         password: 'Password123!',
       });
     } catch (err: any) {
@@ -62,9 +78,18 @@ export default function CreateUserModal({ isOpen, onClose, onUserCreated }: Crea
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl w-full max-w-md overflow-hidden shadow-2xl">
         <div className="flex items-center justify-between p-4 border-b border-zinc-800">
           <h2 className="text-lg font-semibold text-white">Create New User</h2>
-          <button onClick={onClose} className="text-zinc-500 hover:text-white transition-colors">
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+                type="button"
+                onClick={handleAutogenerate}
+                className="text-xs px-2 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded hover:bg-blue-500/20 transition-colors"
+            >
+                Autogenerate
+            </button>
+            <button onClick={onClose} className="text-zinc-500 hover:text-white transition-colors">
+                <X size={20} />
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
@@ -110,6 +135,18 @@ export default function CreateUserModal({ isOpen, onClose, onUserCreated }: Crea
                 placeholder="Doe"
                 />
             </div>
+          </div>
+
+           <div className="space-y-2">
+            <label className="text-sm font-medium text-zinc-400">Date of Birth</label>
+            <input
+              type="date"
+              name="dob"
+              required // Assuming we want this required if we capture it
+              value={formData.dob}
+              onChange={handleChange}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500"
+            />
           </div>
 
           <div className="space-y-2">
