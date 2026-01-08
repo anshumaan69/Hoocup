@@ -93,6 +93,10 @@ exports.deleteUser = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
+        if (user.role === 'admin') {
+            return res.status(403).json({ message: 'Cannot delete an admin account' });
+        }
+
         await user.deleteOne();
         res.status(200).json({ message: 'User removed' });
     } catch (error) {
@@ -134,6 +138,10 @@ exports.updateUserStatus = async (req, res) => {
 
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (user.role === 'admin') {
+             return res.status(403).json({ message: 'Cannot change status of an admin account' });
         }
 
         user.status = status;
