@@ -52,15 +52,23 @@ const getCookieNames = (req) => {
     // remove trailing slash for comparison
     const cleanAdminUrl = adminUrl.replace(/\/$/, '');
     
+    // DEBUG LOGGING
+    console.log('--- ORIGIN CHECK ---');
+    console.log('Origin:', origin);
+    console.log('Referer:', referer);
+    console.log('Expected AdminURL:', cleanAdminUrl);
+    
     const isOriginAdmin = origin && (origin === adminUrl || origin === cleanAdminUrl);
     const isRefererAdmin = referer && referer.startsWith(cleanAdminUrl);
 
     if (isOriginAdmin || isRefererAdmin) {
+        console.log('Match: ADMIN');
         return {
             access: 'admin_access_token',
             refresh: 'admin_refresh_token'
         };
     }
+    console.log('Match: USER (Default)');
     return {
         access: 'access_token',
         refresh: 'refresh_token'
