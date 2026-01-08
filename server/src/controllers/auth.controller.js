@@ -37,8 +37,8 @@ const getCookieOptions = () => {
     const isProd = process.env.NODE_ENV === 'production';
     return {
         httpOnly: true,
-        secure: isProd,
-        sameSite: 'lax', // Reliable with Proxy
+        secure: isProd, // Must be true for sameSite: 'none'
+        sameSite: isProd ? 'none' : 'lax', // 'none' required for cross-site (Vercel -> Render)
         path: '/'
     };
 };
