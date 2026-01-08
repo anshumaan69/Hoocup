@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Heart, MessageCircle, Share2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, MessageCircle, Share2, ZoomIn } from 'lucide-react';
+import MediaViewer from './MediaViewer';
 
 interface FeedItemProps {
     user: {
@@ -17,6 +18,7 @@ interface FeedItemProps {
 
 export default function FeedItem({ user }: FeedItemProps) {
     const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+    const [isViewerOpen, setIsViewerOpen] = useState(false);
 
     const nextPhoto = () => {
         if (currentPhotoIndex < user.photos.length - 1) {
@@ -58,7 +60,10 @@ export default function FeedItem({ user }: FeedItemProps) {
             </div>
 
             {/* Media Carousel */}
-            <div className="w-full relative aspect-[4/5] bg-black group"> 
+            <div 
+                className="w-full relative aspect-[4/5] bg-black group cursor-pointer"
+                onClick={() => setIsViewerOpen(true)}
+            > 
                 {/* Keep backend black for media to standout, or use bg-muted */}
                 <Image 
                     src={currentPhoto.url} 
@@ -124,6 +129,12 @@ export default function FeedItem({ user }: FeedItemProps) {
                     <span className="text-muted-foreground">{user.bio || 'No bio yet.'}</span>
                 </div>
             </div>
+            <MediaViewer 
+                isOpen={isViewerOpen}
+                onClose={() => setIsViewerOpen(false)}
+                initialIndex={currentPhotoIndex} // Passing current index so it opens to what they are looking at
+                photos={user.photos}
+            />
         </article>
     );
 }
