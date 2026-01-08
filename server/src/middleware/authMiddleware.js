@@ -4,8 +4,19 @@ const User = require('../models/user'); // Assuming User model is located here
 const protect = async (req, res, next) => {
     let token;
     
-    if (req.cookies.access_token) {
-        token = req.cookies.access_token;
+    // Determine cookie name based on origin, matching controller logic
+    const origin = req.headers.origin;
+    const referer = req.headers.referer;
+    const adminUrl = process.env.ADMIN_URL || 'http://localhost:3001';
+    const cleanAdminUrl = adminUrl.replace(/\/$/, '');
+    
+    const isOriginAdmin = origin && (origin === adminUrl || origin === cleanAdminUrl);
+    const isRefererAdmin = referer && referer.startsWith(cleanAdminUrl);
+    
+    const tokenName = (isOriginAdmin || isRefererAdmin) ? 'admin_access_token' : 'access_token';
+
+    if (req.cookies[tokenName]) {
+        token = req.cookies[tokenName];
     }
 
     if (!token) {

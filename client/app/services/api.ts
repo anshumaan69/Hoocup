@@ -51,8 +51,15 @@ api.interceptors.response.use(
                     document.cookie = 'csrf_token=; Max-Age=0; path=/;';
                 }
 
-                if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
-                    window.location.href = '/login'; 
+                if (typeof window !== 'undefined') {
+                    const path = window.location.pathname;
+                    // Prevent redirect loop if already on login or signup
+                    if (!path.startsWith('/login') && !path.startsWith('/signup')) {
+                        console.log('[API] 401 Force Logout -> Redirecting to Login');
+                         window.location.href = '/login'; 
+                    } else {
+                        console.log('[API] 401 on Login Page - suppressing redirect');
+                    }
                 }
                 return Promise.reject(refreshError);
             }

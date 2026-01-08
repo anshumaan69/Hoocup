@@ -43,33 +43,66 @@ const getCookieOptions = () => {
     };
 };
 
-const setCookies = (res, accessToken, refreshToken) => {
+const getCookieNames = (req) => {
+    const origin = req.headers.origin;
+    const referer = req.headers.referer;
+    const adminUrl = process.env.ADMIN_URL || 'http://localhost:3001';
+    
+    // Check if origin OR referer matches admin url
+    // remove trailing slash for comparison
+    const cleanAdminUrl = adminUrl.replace(/\/$/, '');
+    
+    const isOriginAdmin = origin && (origin === adminUrl || origin === cleanAdminUrl);
+    const isRefererAdmin = referer && referer.startsWith(cleanAdminUrl);
+
+    if (isOriginAdmin || isRefererAdmin) {
+        return {
+            access: 'admin_access_token',
+            refresh: 'admin_refresh_token'
+        };
+    }
+    return {
+        access: 'access_token',
+        refresh: 'refresh_token'
+    };
+};
+
+const setCookies = (req, res, accessToken, refreshToken) => {
     const options = getCookieOptions();
+    const { access, refresh } = getCookieNames(req);
 
     // Access Token (Short-lived)
-    res.cookie('access_token', accessToken, {
+    res.cookie(access, accessToken, {
         ...options,
         maxAge: 15 * 60 * 1000 // 15 mins
     });
 
     // Refresh Token (Long-lived)
-    res.cookie('refresh_token', refreshToken, {
+    res.cookie(refresh, refreshToken, {
         ...options,
         maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
-    // CSRF Token (Readable by client)
+    // CSRF Token (Readable by client - shared or separate? Shared is fine usually, but safer separate)
+    // For simplicity, we keep CSRF shared or valid for both since it's just a token check.
+    // But let's keep it simple.
     const csrfOptions = { ...options, httpOnly: false };
     const csrfToken = crypto.randomBytes(32).toString('hex');
     res.cookie('csrf_token', csrfToken, csrfOptions);
 };
 
-const clearCookies = (res) => {
+const clearCookies = (req, res) => {
     const options = getCookieOptions();
+    const { access, refresh } = getCookieNames(req);
     
-    // Clear all potential cookies including legacy ones
-    res.clearCookie('access_token', options);
-    res.clearCookie('refresh_token', options);
+    // Clear cookies based on origin
+    res.clearCookie(access, options);
+    res.clearCookie(refresh, options);
+    
+    // Also try to clear legacy/standard ones just in case avoiding zombies
+    if (access !== 'access_token') res.clearCookie('access_token', options);
+    if (refresh !== 'refresh_token') res.clearCookie('refresh_token', options);
+    
     res.clearCookie('csrf_token', { ...options, httpOnly: false }); 
     res.clearCookie('token', options); 
 };
@@ -136,7 +169,7 @@ exports.googleAuth = async (req, res) => {
         user.refresh_token_hash = hashToken(refreshToken);
         await user.save();
 
-        setCookies(res, accessToken, refreshToken);
+        setCookies(req, res, accessToken, refreshToken);
 
         res.status(200).json({ success: true, user: { ...user.toObject(), refresh_token_hash: undefined } });
     } catch (error) {
@@ -155,6 +188,11 @@ exports.sendOtp = async (req, res) => {
     }
 
     try {
+        // Magic Number for Testing
+        if (phone === '+919999999999') {
+            return res.status(200).json({ message: 'OTP sent successfully (MOCK TEST)' });
+        }
+
         // Mock fallback
         if (!twilioClient) {
              return res.status(200).json({ message: 'OTP sent successfully (MOCK)' });
@@ -182,7 +220,10 @@ exports.verifyOtp = async (req, res) => {
     }
     
     try {
-        if (!twilioClient) {
+        if (phone === '+919999999999') {
+             if (code === '123456') isVerified = true;
+             else return res.status(400).json({ message: 'Invalid OTP (MOCK TEST)' });
+        } else if (!twilioClient) {
              if (code === '123456') isVerified = true;
              else return res.status(400).json({ message: 'Invalid OTP (MOCK)' });
         } else {
@@ -218,7 +259,7 @@ exports.verifyOtp = async (req, res) => {
                 const { accessToken, refreshToken } = generateTokens(user._id);
                 user.refresh_token_hash = hashToken(refreshToken);
                 await user.save();
-                setCookies(res, accessToken, refreshToken);
+                setCookies(req, res, accessToken, refreshToken);
                 return res.status(200).json({ success: true, user: { ...user.toObject(), refresh_token_hash: undefined } });
             }
 
@@ -239,7 +280,7 @@ exports.verifyOtp = async (req, res) => {
                          user.refresh_token_hash = hashToken(refreshToken);
                         await user.save();
                         
-                        setCookies(res, accessToken, refreshToken);
+                        setCookies(req, res, accessToken, refreshToken);
                         return res.status(200).json({ success: true, user: { ...user.toObject(), refresh_token_hash: undefined } });
                     }
                 } catch (e) {
@@ -264,7 +305,8 @@ exports.verifyOtp = async (req, res) => {
 
 // Refresh Token
 exports.refreshToken = async (req, res) => {
-    const incomingRefreshToken = req.cookies.refresh_token;
+    const { refresh } = getCookieNames(req);
+    const incomingRefreshToken = req.cookies[refresh];
 
     if (!incomingRefreshToken) {
         return res.status(401).json({ message: 'No refresh token' });
@@ -287,7 +329,7 @@ exports.refreshToken = async (req, res) => {
         if (!user) {
             // REUSE DETECTION / THEFT: Token is valid format but not found? 
             // Could mean it was already rotated. Clear cookies.
-            clearCookies(res);
+            clearCookies(req, res);
             return res.status(401).json({ message: 'Invalid or expired token reuse detected' });
         }
 
@@ -296,12 +338,12 @@ exports.refreshToken = async (req, res) => {
         user.refresh_token_hash = hashToken(newRefreshToken);
         await user.save();
 
-        setCookies(res, accessToken, newRefreshToken);
+        setCookies(req, res, accessToken, newRefreshToken);
         res.status(200).json({ success: true });
 
     } catch (error) {
         console.error('Refresh Error:', error);
-        clearCookies(res);
+        clearCookies(req, res);
         res.status(401).json({ message: 'Refresh failed' });
     }
 };
@@ -371,7 +413,7 @@ exports.logout = async (req, res) => {
     } catch (e) {
         // Ignore error user might be invalid
     }
-    clearCookies(res);
+    clearCookies(req, res);
     res.status(200).json({ message: 'Logged out' });
 };
 

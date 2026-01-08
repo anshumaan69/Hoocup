@@ -104,6 +104,29 @@ exports.deleteUser = async (req, res) => {
 // @desc    Update user status (Ban/Suspend/Active)
 // @route   PATCH /api/admin/users/:id/status
 // @access  Private/Admin
+// @desc    Get dashboard stats
+// @route   GET /api/admin/stats
+// @access  Private/Admin
+exports.getStats = async (req, res) => {
+    try {
+        const totalUsers = await User.countDocuments();
+        const activeUsers = await User.countDocuments({ status: 'active' });
+        const suspendedUsers = await User.countDocuments({ status: 'suspended' });
+        const bannedUsers = await User.countDocuments({ status: 'banned' });
+
+        res.status(200).json({
+            success: true,
+            totalUsers,
+            activeUsers,
+            suspendedUsers,
+            bannedUsers
+        });
+    } catch (error) {
+        console.error('Admin Stats Error:', error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
 exports.updateUserStatus = async (req, res) => {
     try {
         const { status } = req.body; // 'active', 'banned', 'suspended'

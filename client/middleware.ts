@@ -2,14 +2,13 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  const accessToken = request.cookies.get('access_token')?.value;
-  const refreshToken = request.cookies.get('refresh_token')?.value;
-  const token = accessToken || refreshToken; // Consider logged in if either exists
   const { pathname } = request.nextUrl;
   
-  if (pathname.includes('/home') || pathname.includes('/auth/callback')) {
-      console.log(`[MIDDLEWARE] Path: ${pathname}, Token present: ${!!token}`);
-  }
+  const accessToken = request.cookies.get('access_token')?.value;
+  const refreshToken = request.cookies.get('refresh_token')?.value;
+  const token = accessToken || refreshToken;
+  
+  console.log(`[MIDDLEWARE] Path: ${pathname} | Token: ${token ? 'YES' : 'NO'}`);
 
   // We remove '/home' and '/register-details' from here because we want to allow 
   // client-side auth checks (localStorage) to take over if cookies fail.
@@ -30,5 +29,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/home/:path*', '/dashboard/:path*', '/register-details/:path*', '/login', '/signup'],
+  matcher: ['/home/:path*', '/dashboard/:path*', '/register-details/:path*'],
 };
