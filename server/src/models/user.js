@@ -65,11 +65,7 @@ const userSchema = new mongoose.Schema(
         default: 'user',
     },
 
-    refresh_token_hash: {
-      type: String,
-      select: false,
-      index: true,
-    },
+
 
     username: {
       type: String,

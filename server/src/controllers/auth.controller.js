@@ -25,50 +25,50 @@ try {
 
 // --- Helper Functions ---
 
+// --- Stateless JWT Helper Functions ---
+
 const generateTokens = (userId) => {
-    const accessToken = jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '15m' });
-    const refreshToken = crypto.randomBytes(40).toString('hex');
+    // Access Token: Short Lived (15m)
+    const accessToken = jwt.sign(
+        { id: userId, type: 'access' }, 
+        process.env.JWT_SECRET, 
+        { expiresIn: '15m' }
+    );
+    
+    // Refresh Token: Long Lived (30d), Stateless (No DB)
+    // Using REFRESH_TOKEN_SECRET if available, else fallback to JWT_SECRET (for dev ease)
+    // In production, these should be different!
+    const secret = process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET;
+    
+    const refreshToken = jwt.sign(
+        { id: userId, type: 'refresh' }, 
+        secret, 
+        { expiresIn: '30d' }
+    );
+    
     return { accessToken, refreshToken };
 };
 
-const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
+// Removed hashToken as we are now stateless
 
 const getCookieOptions = () => {
+    // SECURITY NOTE:
+    // On localhost (development), 'secure: true' often fails if not using https.
+    // 'sameSite: none' REQUIRED 'secure: true'.
+    // So for dev (http://localhost), we need 'lax' and 'secure: false'.
+    
     const isProd = process.env.NODE_ENV === 'production';
+    
     return {
         httpOnly: true,
-        secure: isProd, // Must be true for sameSite: 'none'
-        sameSite: isProd ? 'none' : 'lax', // 'none' required for cross-site (Vercel -> Render)
+        secure: isProd, 
+        sameSite: isProd ? 'none' : 'lax', 
         path: '/'
     };
 };
 
+// ... getCookieNames (unchanged) ...
 const getCookieNames = (req) => {
-    const origin = req.headers.origin;
-    const referer = req.headers.referer;
-    const adminUrl = process.env.ADMIN_URL || 'http://localhost:3001';
-    
-    // Check if origin OR referer matches admin url
-    // remove trailing slash for comparison
-    const cleanAdminUrl = adminUrl.replace(/\/$/, '');
-    
-    // DEBUG LOGGING
-    console.log('--- ORIGIN CHECK ---');
-    console.log('Origin:', origin);
-    console.log('Referer:', referer);
-    console.log('Expected AdminURL:', cleanAdminUrl);
-    
-    const isOriginAdmin = origin && (origin === adminUrl || origin === cleanAdminUrl);
-    const isRefererAdmin = referer && referer.startsWith(cleanAdminUrl);
-
-    if (isOriginAdmin || isRefererAdmin) {
-        console.log('Match: ADMIN');
-        return {
-            access: 'admin_access_token',
-            refresh: 'admin_refresh_token'
-        };
-    }
-    console.log('Match: USER (Default)');
     return {
         access: 'access_token',
         refresh: 'refresh_token'
@@ -79,21 +79,19 @@ const setCookies = (req, res, accessToken, refreshToken) => {
     const options = getCookieOptions();
     const { access, refresh } = getCookieNames(req);
 
-    // Access Token (Short-lived)
+    // Access Token (15 mins)
     res.cookie(access, accessToken, {
         ...options,
-        maxAge: 15 * 60 * 1000 // 15 mins
+        maxAge: 15 * 60 * 1000 
     });
 
-    // Refresh Token (Long-lived)
+    // Refresh Token (30 days)
     res.cookie(refresh, refreshToken, {
         ...options,
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        maxAge: 30 * 24 * 60 * 60 * 1000 
     });
 
-    // CSRF Token (Readable by client - shared or separate? Shared is fine usually, but safer separate)
-    // For simplicity, we keep CSRF shared or valid for both since it's just a token check.
-    // But let's keep it simple.
+    // CSRF Token
     const csrfOptions = { ...options, httpOnly: false };
     const csrfToken = crypto.randomBytes(32).toString('hex');
     res.cookie('csrf_token', csrfToken, csrfOptions);
@@ -103,215 +101,23 @@ const clearCookies = (req, res) => {
     const options = getCookieOptions();
     const { access, refresh } = getCookieNames(req);
     
-    // Clear cookies based on origin
+    // Clear cookies based on origin (now standardized)
     res.clearCookie(access, options);
     res.clearCookie(refresh, options);
     
-    // Also try to clear legacy/standard ones just in case avoiding zombies
+    // CLEAR LEGACY / ZOMBIE COOKIES:
+    res.clearCookie('admin_access_token', options);
+    res.clearCookie('admin_refresh_token', options);
+    
     if (access !== 'access_token') res.clearCookie('access_token', options);
     if (refresh !== 'refresh_token') res.clearCookie('refresh_token', options);
     
     res.clearCookie('csrf_token', { ...options, httpOnly: false }); 
-    res.clearCookie('token', options); 
 };
 
-// --- Controllers ---
+// ... Controllers ...
 
-// Google Auth
-exports.googleAuth = async (req, res) => {
-    const { code, redirect_uri } = req.body; 
-    try {
-        // Use provided redirect_uri or fallback to env var
-        const clientUrl = process.env.CLIENT_URL ? process.env.CLIENT_URL.replace(/\/$/, '') : 'http://localhost:3000';
-        const finalRedirectUri = redirect_uri || `${clientUrl}/api/auth/callback/google`;
-        
-        const { tokens } = await client.getToken({
-            code,
-            redirect_uri: finalRedirectUri
-        });
-        
-        client.setCredentials(tokens);
-        const ticket = await client.verifyIdToken({
-            idToken: tokens.id_token,
-            audience: process.env.GOOGLE_CLIENT_ID,
-        });
-        const payload = ticket.getPayload();
-        const { email, given_name, family_name, picture } = payload;
-
-        let user = await User.findOne({ email }).select('+refresh_token_hash'); // Explicitly select for internal use
-
-        if (!user) {
-            user = new User({
-                email,
-                first_name: given_name,
-                last_name: family_name,
-                avatar: picture, // Save Google Avatar
-                auth_provider: 'google',
-            });
-            await user.save();
-        } else if (!user.avatar) {
-             // Optional: Backfill avatar if missing
-             user.avatar = picture;
-             await user.save();
-        }
-
-        // Check Status
-        if (user.status === 'suspended') {
-            return res.status(403).json({ message: 'Your account has been suspended by admin until further notice' });
-        }
-
-        if (user.status === 'banned') {
-            if (user.banExpiresAt && user.banExpiresAt > new Date()) {
-                const daysLeft = Math.ceil((user.banExpiresAt - new Date()) / (1000 * 60 * 60 * 24));
-                return res.status(403).json({ message: `You have been banned for next ${daysLeft} days` });
-            } else {
-                user.status = 'active';
-                user.banExpiresAt = undefined;
-                await user.save();
-            }
-        }
-
-        const { accessToken, refreshToken } = generateTokens(user._id);
-        
-        // Save hashed refresh token
-        user.refresh_token_hash = hashToken(refreshToken);
-        await user.save();
-
-        setCookies(req, res, accessToken, refreshToken);
-
-        res.status(200).json({ success: true, user: { ...user.toObject(), refresh_token_hash: undefined } });
-    } catch (error) {
-        console.error('Google Auth Error:', error);
-        res.status(401).json({ message: 'Authentication failed' });
-    }
-};
-
-// Send OTP
-exports.sendOtp = async (req, res) => {
-    let { phone } = req.body;
-    
-    if (phone) {
-        phone = phone.toString().replace(/\s+/g, '');
-        if (!phone.startsWith('+')) phone = '+91' + phone;
-    }
-
-    try {
-        // Magic Number for Testing
-        if (phone === '+919999999999') {
-            return res.status(200).json({ message: 'OTP sent successfully (MOCK TEST)' });
-        }
-
-        // Mock fallback
-        if (!twilioClient) {
-             return res.status(200).json({ message: 'OTP sent successfully (MOCK)' });
-        }
-
-        const serviceSid = process.env.TWILIO_SERVICE_SID.trim();
-        const verification = await twilioClient.verify.v2.services(serviceSid)
-            .verifications.create({ to: phone.trim(), channel: 'sms' });
-        
-        res.status(200).json({ message: 'OTP sent successfully', status: verification.status });
-    } catch (error) {
-        console.error('Send OTP Error:', error);
-        res.status(500).json({ message: 'Failed to send OTP' });
-    }
-};
-
-// Verify OTP
-exports.verifyOtp = async (req, res) => {
-    let { phone, code } = req.body;
-    let isVerified = false;
-
-    if (phone) {
-        phone = phone.toString().replace(/\s+/g, '');
-        if (!phone.startsWith('+')) phone = '+91' + phone;
-    }
-    
-    try {
-        if (phone === '+919999999999') {
-             if (code === '123456') isVerified = true;
-             else return res.status(400).json({ message: 'Invalid OTP (MOCK TEST)' });
-        } else if (!twilioClient) {
-             if (code === '123456') isVerified = true;
-             else return res.status(400).json({ message: 'Invalid OTP (MOCK)' });
-        } else {
-             const serviceSid = process.env.TWILIO_SERVICE_SID.trim();
-             const check = await twilioClient.verify.v2.services(serviceSid)
-                .verificationChecks.create({ to: phone.trim(), code });
-             if (check.status === 'approved') isVerified = true;
-        }
-
-        if (isVerified) {
-            // Case 1: content login (User exists with this phone)
-            let user = await User.findOne({ phone }).select('+refresh_token_hash');
-            
-            if (user) {
-                // LOGIN FLOW
-                
-                // Check Status
-                if (user.status === 'suspended') {
-                    return res.status(403).json({ message: 'Your account has been suspended by admin until further notice' });
-                }
-
-                if (user.status === 'banned') {
-                    if (user.banExpiresAt && user.banExpiresAt > new Date()) {
-                        const daysLeft = Math.ceil((user.banExpiresAt - new Date()) / (1000 * 60 * 60 * 24));
-                        return res.status(403).json({ message: `You have been banned for next ${daysLeft} days` });
-                    } else {
-                        user.status = 'active';
-                        user.banExpiresAt = undefined;
-                        await user.save();
-                    }
-                }
-
-                const { accessToken, refreshToken } = generateTokens(user._id);
-                user.refresh_token_hash = hashToken(refreshToken);
-                await user.save();
-                setCookies(req, res, accessToken, refreshToken);
-                return res.status(200).json({ success: true, user: { ...user.toObject(), refresh_token_hash: undefined } });
-            }
-
-            // Case 2: Signup Step 2 (Linking Phone to Google Account)
-            // Check if user is currently logged in (Google Session)
-            const incomingToken = req.cookies.access_token;
-            if (incomingToken) {
-                try {
-                    const decoded = jwt.verify(incomingToken, process.env.JWT_SECRET);
-                    user = await User.findById(decoded.id);
-                    
-                    if (user) {
-                        // Link phone to existing Google user
-                        user.phone = phone;
-                        user.is_phone_verified = true;
-                        // user.refresh_token_hash = ... (Already set during Google login, but good to rotate)
-                         const { accessToken, refreshToken } = generateTokens(user._id);
-                         user.refresh_token_hash = hashToken(refreshToken);
-                        await user.save();
-                        
-                        setCookies(req, res, accessToken, refreshToken);
-                        return res.status(200).json({ success: true, user: { ...user.toObject(), refresh_token_hash: undefined } });
-                    }
-                } catch (e) {
-                    // Token invalid, proceed to error
-                }
-            }
-
-            // Case 3: Unknown Phone & No Session -> REJECT
-            return res.status(400).json({ 
-                message: 'Account not found. Please signup with Google first.',
-                error: 'signup_required' 
-            });
-
-        } else {
-            return res.status(400).json({ message: 'Invalid OTP' });
-        }
-    } catch (error) {
-        console.error('Verify OTP Error:', error);
-        res.status(500).json({ message: 'Verification failed' });
-    }
-};
-
-// Refresh Token
+// Refresh Token (Stateless Version)
 exports.refreshToken = async (req, res) => {
     const { refresh } = getCookieNames(req);
     const incomingRefreshToken = req.cookies[refresh];
@@ -321,32 +127,45 @@ exports.refreshToken = async (req, res) => {
     }
 
     try {
-        // We need to find the user efficiently. Since we don't have ID in opaque token,
-        // we might need to rely on the token itself.
-        // HOWEVER: Best practice is opaque token lookup. 
-        // For simplicity with Mongoose without a separate Token collection,
-        // we can try to find the user who has this hash.
-        // Note: This is inefficient (scan). Better: Store { userId, token } in separate collection.
-        // COMPROMISE: We will assume we found the user via an additional cookie or just inefficient scan for now?
-        // ACTION: Let's do the scan for now as the userbase is small, or decode if we used JWT for refresh token.
-        // Plan said: "Refresh Token: JWT or opaque". Let's use opaque for security.
+        const secret = process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET;
         
-        const incomingHash = hashToken(incomingRefreshToken);
-        const user = await User.findOne({ refresh_token_hash: incomingHash }).select('+refresh_token_hash');
-
-        if (!user) {
-            // REUSE DETECTION / THEFT: Token is valid format but not found? 
-            // Could mean it was already rotated. Clear cookies.
+        let decoded;
+        try {
+            decoded = jwt.verify(incomingRefreshToken, secret);
+        } catch (jwtError) {
+            // Token is invalid, expired, or malformed (legacy token)
+            // Just clear cookies and return 401
             clearCookies(req, res);
-            return res.status(401).json({ message: 'Invalid or expired token reuse detected' });
+            return res.status(401).json({ message: 'Session expired' });
+        }
+        
+        // 2. Check Type
+        if (decoded.type !== 'refresh') {
+            clearCookies(req, res);
+            return res.status(401).json({ message: 'Invalid token type' });
         }
 
-        // Rotate
-        const { accessToken, refreshToken: newRefreshToken } = generateTokens(user._id);
-        user.refresh_token_hash = hashToken(newRefreshToken);
-        await user.save();
+        // 3. Issue NEW Access Token
+        const newAccessToken = jwt.sign(
+            { id: decoded.id, type: 'access' }, 
+            process.env.JWT_SECRET, 
+            { expiresIn: '15m' }
+        );
 
-        setCookies(req, res, accessToken, newRefreshToken);
+        // 4. Send cookies (Keep same refresh token - No Rotation)
+        const options = getCookieOptions();
+        const { access } = getCookieNames(req);
+        
+        res.cookie(access, newAccessToken, {
+            ...options,
+            maxAge: 15 * 60 * 1000 
+        });
+        
+        // Update CSRF too for safety
+        const csrfOptions = { ...options, httpOnly: false };
+        const csrfToken = crypto.randomBytes(32).toString('hex');
+        res.cookie('csrf_token', csrfToken, csrfOptions);
+
         res.status(200).json({ success: true });
 
     } catch (error) {
@@ -412,15 +231,193 @@ exports.registerDetails = async (req, res) => {
     }
 };
 
-exports.logout = async (req, res) => {
+// Google Auth
+exports.googleAuth = async (req, res) => {
+    const { code, redirect_uri } = req.body; 
     try {
-        // Invalidate in DB for extra security
-        if (req.user && req.user.id) {
-            await User.findByIdAndUpdate(req.user.id, { refresh_token_hash: null });
+        // Use provided redirect_uri or fallback to env var
+        const clientUrl = process.env.CLIENT_URL ? process.env.CLIENT_URL.replace(/\/$/, '') : 'http://localhost:3000';
+        const finalRedirectUri = redirect_uri || `${clientUrl}/api/auth/callback/google`;
+        
+        const { tokens } = await client.getToken({
+            code,
+            redirect_uri: finalRedirectUri
+        });
+        
+        client.setCredentials(tokens);
+        const ticket = await client.verifyIdToken({
+            idToken: tokens.id_token,
+            audience: process.env.GOOGLE_CLIENT_ID,
+        });
+        const payload = ticket.getPayload();
+        const { email, given_name, family_name, picture } = payload;
+
+        let user = await User.findOne({ email });
+
+        if (!user) {
+            user = new User({
+                email,
+                first_name: given_name,
+                last_name: family_name,
+                avatar: picture, 
+                auth_provider: 'google',
+            });
+            await user.save();
+        } else if (!user.avatar) {
+             user.avatar = picture;
+             await user.save();
         }
-    } catch (e) {
-        // Ignore error user might be invalid
+
+        // Check Status
+        if (user.status === 'suspended') {
+            return res.status(403).json({ message: 'Your account has been suspended by admin until further notice' });
+        }
+
+        if (user.status === 'banned') {
+            if (user.banExpiresAt && user.banExpiresAt > new Date()) {
+                const daysLeft = Math.ceil((user.banExpiresAt - new Date()) / (1000 * 60 * 60 * 24));
+                return res.status(403).json({ message: `You have been banned for next ${daysLeft} days` });
+            } else {
+                user.status = 'active';
+                user.banExpiresAt = undefined;
+                await user.save();
+            }
+        }
+
+        const { accessToken, refreshToken } = generateTokens(user._id);
+        
+
+
+        setCookies(req, res, accessToken, refreshToken);
+
+        res.status(200).json({ success: true, user: { ...user.toObject() } });
+    } catch (error) {
+        console.error('Google Auth Error:', error);
+        res.status(401).json({ message: 'Authentication failed' });
     }
+};
+
+// Send OTP
+exports.sendOtp = async (req, res) => {
+    let { phone } = req.body;
+    
+    if (phone) {
+        phone = phone.toString().replace(/\s+/g, '');
+        if (!phone.startsWith('+')) phone = '+91' + phone;
+    }
+
+    try {
+        // Magic Number for Testing
+        if (process.env.NODE_ENV !== 'production' && phone === '+919999999999') {
+            return res.status(200).json({ message: 'OTP sent successfully (MOCK TEST)' });
+        }
+
+        // Mock fallback
+        if (!twilioClient) {
+             return res.status(200).json({ message: 'OTP sent successfully (MOCK)' });
+        }
+
+        const serviceSid = process.env.TWILIO_SERVICE_SID.trim();
+        const verification = await twilioClient.verify.v2.services(serviceSid)
+            .verifications.create({ to: phone.trim(), channel: 'sms' });
+        
+        res.status(200).json({ message: 'OTP sent successfully', status: verification.status });
+    } catch (error) {
+        console.error('Send OTP Error:', error);
+        res.status(500).json({ message: 'Failed to send OTP' });
+    }
+};
+
+// Verify OTP
+exports.verifyOtp = async (req, res) => {
+    let { phone, code } = req.body;
+    let isVerified = false;
+
+    if (phone) {
+        phone = phone.toString().replace(/\s+/g, '');
+        if (!phone.startsWith('+')) phone = '+91' + phone;
+    }
+    
+    try {
+        if (process.env.NODE_ENV !== 'production' && phone === '+919999999999') {
+             if (code === '123456') isVerified = true;
+             else return res.status(400).json({ message: 'Invalid OTP (MOCK TEST)' });
+        } else if (!twilioClient) {
+             if (code === '123456') isVerified = true;
+             else return res.status(400).json({ message: 'Invalid OTP (MOCK)' });
+        } else {
+             const serviceSid = process.env.TWILIO_SERVICE_SID.trim();
+             const check = await twilioClient.verify.v2.services(serviceSid)
+                .verificationChecks.create({ to: phone.trim(), code });
+             if (check.status === 'approved') isVerified = true;
+        }
+
+        if (isVerified) {
+            // Case 1: content login (User exists with this phone)
+            let user = await User.findOne({ phone });
+            
+            if (user) {
+                // LOGIN FLOW
+                if (user.status === 'suspended') {
+                    return res.status(403).json({ message: 'Your account has been suspended by admin until further notice' });
+                }
+
+                if (user.status === 'banned') {
+                    if (user.banExpiresAt && user.banExpiresAt > new Date()) {
+                        const daysLeft = Math.ceil((user.banExpiresAt - new Date()) / (1000 * 60 * 60 * 24));
+                        return res.status(403).json({ message: `You have been banned for next ${daysLeft} days` });
+                    } else {
+                        user.status = 'active';
+                        user.banExpiresAt = undefined;
+                        await user.save();
+                    }
+                }
+
+                const { accessToken, refreshToken } = generateTokens(user._id);
+                // Stateless: No Hash
+                setCookies(req, res, accessToken, refreshToken);
+                return res.status(200).json({ success: true, user: { ...user.toObject() } });
+            }
+
+            // Case 2: Signup Step 2 (Linking Phone to Google Account)
+            const incomingToken = req.cookies.access_token;
+            if (incomingToken) {
+                try {
+                    const decoded = jwt.verify(incomingToken, process.env.JWT_SECRET);
+                    user = await User.findById(decoded.id);
+                    
+                    if (user) {
+                        user.phone = phone;
+                        user.is_phone_verified = true;
+                         const { accessToken, refreshToken } = generateTokens(user._id);
+                         // Stateless: No Hash
+                        await user.save();
+                        
+                        setCookies(req, res, accessToken, refreshToken);
+                        return res.status(200).json({ success: true, user: { ...user.toObject() } });
+                    }
+                } catch (e) {
+                    // Token invalid
+                }
+            }
+
+            return res.status(400).json({ 
+                message: 'Account not found. Please signup with Google first.',
+                error: 'signup_required' 
+            });
+
+        } else {
+            return res.status(400).json({ message: 'Invalid OTP' });
+        }
+    } catch (error) {
+        console.error('Verify OTP Error:', error);
+        res.status(500).json({ message: 'Verification failed' });
+    }
+};
+
+exports.logout = async (req, res) => {
+    // Stateless logout = just clear cookies.
+    // Cannot invalidate token on server without a blacklist (Redis).
     clearCookies(req, res);
     res.status(200).json({ message: 'Logged out' });
 };
