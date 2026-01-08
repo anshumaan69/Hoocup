@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Heart, MessageCircle, Share2 } from 'lucide-react';
 
 interface FeedItemProps {
@@ -37,7 +38,7 @@ export default function FeedItem({ user }: FeedItemProps) {
         <article className="flex flex-col bg-card border border-border rounded-lg overflow-hidden mb-8 shadow-sm">
             {/* Header */}
             <div className="flex items-center gap-3 p-3 bg-secondary/30">
-                <div className="relative w-8 h-8 rounded-full overflow-hidden border border-border bg-muted">
+                <Link href={`/${user.username}`} className="relative w-8 h-8 rounded-full overflow-hidden border border-border bg-muted cursor-pointer">
                     {user.avatar ? (
                          <Image 
                             src={user.avatar} 
@@ -50,8 +51,10 @@ export default function FeedItem({ user }: FeedItemProps) {
                             {user.username?.[0]?.toUpperCase()}
                         </div>
                     )}
-                </div>
-                <span className="font-semibold text-foreground text-sm">{user.username}</span>
+                </Link>
+                <Link href={`/${user.username}`} className="font-semibold text-foreground text-sm hover:underline cursor-pointer">
+                    {user.username}
+                </Link>
             </div>
 
             {/* Media Carousel */}
@@ -115,7 +118,9 @@ export default function FeedItem({ user }: FeedItemProps) {
                 
                 {/* Caption / Bio */}
                 <div className="text-sm">
-                    <span className="font-semibold text-foreground mr-2">{user.username}</span>
+                    <Link href={`/${user.username}`} className="font-semibold text-foreground mr-2 hover:underline cursor-pointer">
+                        {user.username}
+                    </Link>
                     <span className="text-muted-foreground">{user.bio || 'No bio yet.'}</span>
                 </div>
             </div>
