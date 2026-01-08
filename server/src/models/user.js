@@ -128,6 +128,10 @@ const userSchema = new mongoose.Schema(
     banExpiresAt: {
       type: Date,
     },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: {

@@ -9,13 +9,13 @@ exports.getAllUsers = async (req, res) => {
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
-        const users = await User.find({})
+        const users = await User.find({ deletedAt: null })
             .select('-password -refresh_token_hash')
             .sort({ created_at: -1 })
             .skip(skip)
             .limit(limit);
 
-        const total = await User.countDocuments();
+        const total = await User.countDocuments({ deletedAt: null });
 
         res.status(200).json({
             success: true,
@@ -97,7 +97,10 @@ exports.deleteUser = async (req, res) => {
             return res.status(403).json({ message: 'Cannot delete an admin account' });
         }
 
-        await user.deleteOne();
+        // Soft Delete
+        user.deletedAt = new Date();
+        await user.save();
+        
         res.status(200).json({ message: 'User removed' });
     } catch (error) {
         console.error('Delete User Error:', error);
@@ -113,10 +116,10 @@ exports.deleteUser = async (req, res) => {
 // @access  Private/Admin
 exports.getStats = async (req, res) => {
     try {
-        const totalUsers = await User.countDocuments();
-        const activeUsers = await User.countDocuments({ status: 'active' });
-        const suspendedUsers = await User.countDocuments({ status: 'suspended' });
-        const bannedUsers = await User.countDocuments({ status: 'banned' });
+        const totalUsers = await User.countDocuments({ deletedAt: null });
+        const activeUsers = await User.countDocuments({ status: 'active', deletedAt: null });
+        const suspendedUsers = await User.countDocuments({ status: 'suspended', deletedAt: null });
+        const bannedUsers = await User.countDocuments({ status: 'banned', deletedAt: null });
 
         res.status(200).json({
             success: true,

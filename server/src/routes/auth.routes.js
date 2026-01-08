@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { googleAuth, sendOtp, verifyOtp, registerDetails, logout, refreshToken, getMe, getUserByUsername, uploadPhotos, setProfilePhoto, deletePhoto } = require('../controllers/auth.controller');
+const { googleAuth, sendOtp, verifyOtp, registerDetails, logout, refreshToken, getMe, getUserByUsername, uploadPhotos, setProfilePhoto, deletePhoto, sendEmailOtp, verifyEmailOtp } = require('../controllers/auth.controller');
 const { uploadAvatar } = require('../controllers/avatars.controller');
 const upload = require('../config/multer');
 const uploadMemory = require('../config/multerMemory');
@@ -12,6 +12,8 @@ const rateLimiterMiddleware = require('../middleware/rateLimiter');
 router.post('/google', googleAuth);
 router.post('/send-otp', rateLimiterMiddleware, sendOtp);
 router.post('/verify-otp', verifyOtp);
+router.post('/email/send', rateLimiterMiddleware, sendEmailOtp);
+router.post('/email/verify', verifyEmailOtp);
 router.post('/refresh', refreshToken); // New endpoint for rotation
 // router.get('/users/:username', getUserByUsername); // Moved to user.routes.js
 

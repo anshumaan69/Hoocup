@@ -2,6 +2,7 @@ const User = require('../models/user');
 const { OAuth2Client } = require('google-auth-library');
 const twilio = require('twilio');
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -268,6 +269,10 @@ exports.googleAuth = async (req, res) => {
              await user.save();
         }
 
+        if (user.deletedAt) {
+            return res.status(403).json({ message: 'Your account has been deleted. Please contact support to restore it.' });
+        }
+
         // Check Status
         if (user.status === 'suspended') {
             return res.status(403).json({ message: 'Your account has been suspended by admin until further notice' });
@@ -358,6 +363,10 @@ exports.verifyOtp = async (req, res) => {
             
             if (user) {
                 // LOGIN FLOW
+                if (user.deletedAt) {
+                    return res.status(403).json({ message: 'Your account has been deleted. Please contact support to restore it.' });
+                }
+
                 if (user.status === 'suspended') {
                     return res.status(403).json({ message: 'Your account has been suspended by admin until further notice' });
                 }
@@ -412,6 +421,119 @@ exports.verifyOtp = async (req, res) => {
     } catch (error) {
         console.error('Verify OTP Error:', error);
         res.status(500).json({ message: 'Verification failed' });
+    }
+};
+
+
+
+// --- Email OTP (Stateless) ---
+
+const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.ethereal.email',
+    port: process.env.SMTP_PORT || 587,
+    secure: false, // true for 465, false for other ports
+    auth: {
+        user: process.env.SMTP_USER || 'ethereal_user',
+        pass: process.env.SMTP_PASS || 'ethereal_pass'
+    }
+});
+
+exports.sendEmailOtp = async (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: 'Email is required' });
+
+    try {
+        // 1. Generate OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        // 2. Hash OTP for Stateless verification
+        // (We don't save to DB, we sign it in a cookie)
+        const otpHash = crypto.createHmac('sha256', process.env.JWT_SECRET)
+            .update(otp)
+            .digest('hex');
+
+        // 3. Create Temp Token (5 mins)
+        const emailOtpToken = jwt.sign(
+            { email, otpHash }, 
+            process.env.JWT_SECRET, 
+            { expiresIn: '5m' }
+        );
+
+        // 4. Set Cookie
+        res.cookie('email_otp_token', emailOtpToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            maxAge: 5 * 60 * 1000 // 5 mins
+        });
+
+        // 5. Send Email
+        if (!process.env.SMTP_HOST) {
+            console.log(`[MOCK EMAIL] OTP for ${email}: ${otp}`);
+            return res.status(200).json({ message: 'OTP sent (Mock Mode)' });
+        }
+
+        await transporter.sendMail({
+            from: '"Hoocup Admin" <admin@hoocup.com>',
+            to: email,
+            subject: 'Your Login OTP',
+            text: `Your OTP is: ${otp}. It expires in 5 minutes.`
+        });
+
+        res.status(200).json({ message: 'OTP sent successfully' });
+
+    } catch (error) {
+        console.error('Send Email OTP Error:', error);
+        res.status(500).json({ message: 'Failed to send OTP' });
+    }
+};
+
+exports.verifyEmailOtp = async (req, res) => {
+    const { email, otp } = req.body;
+    const emailOtpToken = req.cookies.email_otp_token;
+
+    if (!email || !otp) return res.status(400).json({ message: 'Email and OTP required' });
+    if (!emailOtpToken) return res.status(400).json({ message: 'OTP expired or not sent' });
+
+    try {
+        // 1. Verify Token
+        const decoded = jwt.verify(emailOtpToken, process.env.JWT_SECRET);
+        
+        if (decoded.email !== email) {
+            return res.status(400).json({ message: 'Email mismatch' });
+        }
+
+        // 2. Verify OTP Hash
+        const incomingHash = crypto.createHmac('sha256', process.env.JWT_SECRET)
+            .update(otp)
+            .digest('hex');
+            
+        if (incomingHash !== decoded.otpHash) {
+            return res.status(400).json({ message: 'Invalid OTP' });
+        }
+
+        // 3. Login User
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (user.deletedAt) return res.status(403).json({ message: 'Account deleted' });
+        if (user.status === 'suspended') return res.status(403).json({ message: 'Account suspended' });
+        if (user.status === 'banned') return res.status(403).json({ message: 'Account banned' });
+
+        // 4. Generate Auth Tokens
+        const { accessToken, refreshToken } = generateTokens(user._id);
+
+        // 5. Set Auth Cookies & Clear OTP Cookie
+        setCookies(req, res, accessToken, refreshToken);
+        res.clearCookie('email_otp_token');
+
+        res.status(200).json({ success: true, user: { ...user.toObject() } });
+
+    } catch (error) {
+        console.error('Verify Email OTP Error:', error);
+        res.status(400).json({ message: 'Invalid or expired OTP session' });
     }
 };
 
