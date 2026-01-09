@@ -52,14 +52,7 @@ function HomeContent() {
                     Hoocup
                 </h1>
                 <div className="flex gap-4">
-                    {user.role === 'admin' && (
-                        <button 
-                            onClick={() => router.push('/admin')}
-                            className="text-sm font-semibold text-primary/80 hover:text-primary transition"
-                        >
-                            Admin Panel
-                        </button>
-                    )}
+
                     <button 
                          onClick={() => router.push(`/${user.username}`)}
                          className="text-sm font-semibold text-muted-foreground hover:text-foreground transition"
