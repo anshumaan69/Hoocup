@@ -10,6 +10,8 @@ const protect = async (req, res, next) => {
     }
 
     if (!token) {
+        // DEBUG LOGGING
+        console.log('[AuthDebug] 401: No token found in cookies. Cookies keys:', Object.keys(req.cookies));
         return res.status(401).json({ message: 'Not authorized, no token' });
     }
 

@@ -5,6 +5,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth.routes');
+const cron = require('node-cron');
 
 const path = require('path');
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
@@ -61,17 +62,19 @@ app.use('/api/users', userRoutes);
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
 
-    // KEEPALIVE HACK: Ping server every 14 minutes to prevent Render from sleeping
-    setInterval(() => {
-        // Use local loopback to keep the process active
-        const url = `http://localhost:${PORT}`;
-        console.log(`[KeepAlive] Pinging ${url}`);
-        http.get(url, (res) => {
-            // Consume data to free memory
+    // CRON JOB: Ping server every minute to keep it alive
+    cron.schedule('* * * * *', () => {
+        const url = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+        console.log(`[KeepAliveCron] Pinging ${url}`);
+        
+        const protocol = url.startsWith('https') ? require('https') : http;
+        
+        protocol.get(url, (res) => {
+            console.log(`[KeepAliveCron] Ping Status: ${res.statusCode}`);
             res.resume();
         }).on('error', (err) => {
-            console.error(`[KeepAlive] Error: ${err.message}`);
+            console.error(`[KeepAliveCron] Error: ${err.message}`);
         });
-    }, 1 * 60 * 1000); // 1 minute (Prevent Render spin-down)
+    });
 });
 
