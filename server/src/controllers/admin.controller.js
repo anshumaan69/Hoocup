@@ -239,13 +239,36 @@ exports.getAllUsers = async (req, res) => {
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
-        const users = await User.find({ deletedAt: null })
+        // Query Builder
+        const query = { deletedAt: null };
+
+        // 1. Search (Username, Email, Name)
+        if (req.query.search) {
+            const searchRegex = new RegExp(req.query.search, 'i');
+            query.$or = [
+                { username: searchRegex },
+                { email: searchRegex },
+                { first_name: searchRegex },
+                { last_name: searchRegex }
+            ];
+        }
+
+        // 2. Filter by Role
+        if (req.query.role && req.query.role !== 'all') {
+            query.role = req.query.role;
+        }
+
+        // 3. Sort
+        const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+        const sort = { created_at: sortOrder };
+
+        const users = await User.find(query)
             .select('-password -refresh_token_hash')
-            .sort({ created_at: -1 })
+            .sort(sort)
             .skip(skip)
             .limit(limit);
 
-        const total = await User.countDocuments({ deletedAt: null });
+        const total = await User.countDocuments(query); // Count matching documents
 
         res.status(200).json({
             success: true,
