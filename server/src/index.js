@@ -72,6 +72,6 @@ app.listen(PORT, '0.0.0.0', () => {
         }).on('error', (err) => {
             console.error(`[KeepAlive] Error: ${err.message}`);
         });
-    }, 14 * 60 * 1000); // 14 minutes
+    }, 1 * 60 * 1000); // 1 minute (Prevent Render spin-down)
 });
 
