@@ -5,7 +5,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth.routes');
-const cron = require('node-cron');
+
 
 const path = require('path');
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
@@ -64,19 +64,19 @@ app.use('/api/users', userRoutes);
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
 
-    // CRON JOB: Ping server every minute to keep it alive
-    cron.schedule('* * * * *', () => {
+    // KEEPALIVE JOB: Ping server every minute to keep it alive (Native implementation to avoid dependency issues)
+    setInterval(() => {
         const url = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
-        console.log(`[KeepAliveCron] Pinging ${url}`);
+        console.log(`[KeepAlive] Pinging ${url}`);
         
         const protocol = url.startsWith('https') ? require('https') : http;
         
         protocol.get(url, (res) => {
-            console.log(`[KeepAliveCron] Ping Status: ${res.statusCode}`);
+            console.log(`[KeepAlive] Ping Status: ${res.statusCode}`);
             res.resume();
         }).on('error', (err) => {
-            console.error(`[KeepAliveCron] Error: ${err.message}`);
+            console.error(`[KeepAlive] Error: ${err.message}`);
         });
-    });
+    }, 1 * 60 * 1000); // 1 minute
 });
 
