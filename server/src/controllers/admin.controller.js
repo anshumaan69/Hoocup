@@ -323,7 +323,7 @@ exports.deleteUser = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        if (user.role === 'admin') {
+        if (user.role === 'admin' && req.user.role !== 'superadmin') {
             return res.status(403).json({ message: 'Cannot delete an admin account' });
         }
 
@@ -373,7 +373,7 @@ exports.updateUserStatus = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        if (user.role === 'admin') {
+        if (user.role === 'admin' && req.user.role !== 'superadmin') {
              return res.status(403).json({ message: 'Cannot change status of an admin account' });
         }
 
@@ -419,6 +419,11 @@ exports.updateUserRole = async (req, res) => {
         if (user._id.toString() === req.user.id) {
             console.log('[AdminDebug] Attempt to modify own role blocked');
             return res.status(403).json({ message: 'You cannot change your own role' });
+        }
+
+        // Prevent Regular Admin from modifying another Admin
+        if (user.role === 'admin' && req.user.role !== 'superadmin') {
+             return res.status(403).json({ message: 'Only Super Admin can modify other Admins' });
         }
 
         if (role && !['admin', 'user'].includes(role)) {

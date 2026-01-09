@@ -10,6 +10,7 @@ interface FeedUser {
     avatar: string;
     bio: string;
     photos: { url: string; _id?: string }[];
+    role?: string;
 }
 
 const Feed = () => {

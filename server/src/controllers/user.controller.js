@@ -21,7 +21,7 @@ exports.getFeed = async (req, res) => {
         };
 
         const users = await User.find(query)
-            .select('username first_name last_name avatar profilePhoto photos bio created_at')
+            .select('username first_name last_name avatar profilePhoto photos bio created_at role')
             .sort({ updated_at: -1 }) // Show recently active/updated users first
             .skip(skip)
             .limit(limit);
@@ -57,7 +57,8 @@ exports.getFeed = async (req, res) => {
                 username: userObj.username,
                 avatar: userObj.avatar,
                 bio: userObj.bio,
-                photos: photos
+                photos: photos,
+                role: userObj.role // Include role for UI customization
             };
         });
 
