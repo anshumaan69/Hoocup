@@ -47,7 +47,11 @@ const protect = async (req, res, next) => {
 
 const authorize = (...roles) => {
     return (req, res, next) => {
+        // DEBUG LOGGING
+        console.log(`[AuthDebug] User: ${req.user.email} | Role: ${req.user.role} | Required: ${roles}`);
+        
         if (!roles.includes(req.user.role)) {
+            console.log(`[AuthDebug] ACCESS DENIED for ${req.user.email}`);
             return res.status(403).json({ 
                 message: `User role ${req.user.role} is not authorized to access this route` 
             });
