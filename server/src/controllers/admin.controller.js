@@ -395,4 +395,44 @@ exports.updateUserStatus = async (req, res) => {
         console.error('Update Status Error:', error);
         res.status(500).json({ message: 'Server Error' });
     }
+        res.status(200).json({ success: true, user });
+    } catch (error) {
+        console.error('Update Status Error:', error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+// @desc    Update user role (Make Admin / Remove Admin)
+// @route   PATCH /api/admin/users/:id/role
+// @access  Private/Admin
+exports.updateUserRole = async (req, res) => {
+    try {
+        const { role } = req.body; // 'admin' or 'user'
+        const user = await User.findById(req.params.id);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Prevent modifying own role
+        if (user._id.toString() === req.user.id) {
+            return res.status(403).json({ message: 'You cannot change your own role' });
+        }
+
+        if (role && !['admin', 'user'].includes(role)) {
+            return res.status(400).json({ message: 'Invalid role' });
+        }
+
+        user.role = role;
+        await user.save();
+
+        res.status(200).json({ 
+            success: true, 
+            message: `User role updated to ${role}`,
+            user 
+        });
+    } catch (error) {
+        console.error('Update Role Error:', error);
+        res.status(500).json({ message: 'Server Error' });
+    }
 };

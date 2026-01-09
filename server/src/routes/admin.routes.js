@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getAllUsers, createUser, deleteUser, updateUserStatus, getStats, uploadBulkUsers, saveBulkUsers, getBulkPreview, cancelBulkUpload } = require('../controllers/admin.controller');
+const { getAllUsers, createUser, deleteUser, updateUserStatus, getStats, uploadBulkUsers, saveBulkUsers, getBulkPreview, cancelBulkUpload, updateUserRole } = require('../controllers/admin.controller');
 const uploadMemory = require('../config/multerMemory'); // Reusing memory storage from auth routes
 const { protect, authorize } = require('../middleware/authMiddleware');
 
