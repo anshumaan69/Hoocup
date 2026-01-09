@@ -18,7 +18,6 @@ exports.csrfProtection = (req, res, next) => {
         });
     }
 
-    // 2. Skip validation for SAFE methods
     if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
         return next();
     }

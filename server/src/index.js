@@ -20,6 +20,8 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
+app.set('trust proxy', 1); // Trust Render's proxy for secure cookies
+
 
 // CORS Configuration
 app.use(cors({
