@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Heart, MessageCircle, Share2, ZoomIn, Crown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, MessageCircle, Share2, ZoomIn } from 'lucide-react';
 import MediaViewer from './MediaViewer';
 
 interface FeedItemProps {
@@ -13,7 +13,6 @@ interface FeedItemProps {
         avatar: string;
         bio: string;
         photos: { url: string; _id?: string }[];
-        role?: string;
     };
 }
 
@@ -55,11 +54,8 @@ export default function FeedItem({ user }: FeedItemProps) {
                         </div>
                     )}
                 </Link>
-                <Link href={`/${user.username}`} className="font-semibold text-foreground text-sm hover:underline cursor-pointer flex items-center gap-1">
+                <Link href={`/${user.username}`} className="font-semibold text-foreground text-sm hover:underline cursor-pointer">
                     {user.username}
-                    {user.role === 'superadmin' && (
-                        <Crown size={14} fill="#BF913B" className="text-[#BF913B]" aria-label="Super Admin" />
-                    )}
                 </Link>
             </div>
 
@@ -127,11 +123,8 @@ export default function FeedItem({ user }: FeedItemProps) {
                 
                 {/* Caption / Bio */}
                 <div className="text-sm">
-                    <Link href={`/${user.username}`} className="font-semibold text-foreground mr-2 hover:underline cursor-pointer inline-flex items-center gap-1">
+                    <Link href={`/${user.username}`} className="font-semibold text-foreground mr-2 hover:underline cursor-pointer">
                         {user.username}
-                        {user.role === 'superadmin' && (
-                            <Crown size={12} fill="#BF913B" className="text-[#BF913B]" />
-                        )}
                     </Link>
                     <span className="text-muted-foreground">{user.bio || 'No bio yet.'}</span>
                 </div>

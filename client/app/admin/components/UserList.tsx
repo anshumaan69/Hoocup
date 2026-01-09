@@ -26,7 +26,7 @@ interface UserListProps {
 }
 
 // Import icons
-import { Trash2, Ban, PauseCircle, PlayCircle, Crown } from 'lucide-react';
+import { Trash2, Ban, PauseCircle, PlayCircle } from 'lucide-react';
 
 export default function UserList({ users, page, pages, setPage, loading, onDelete, onUpdateStatus }: UserListProps) {
   if (loading) {
@@ -86,9 +86,6 @@ export default function UserList({ users, page, pages, setPage, loading, onDelet
                         }`}>
                             {user.role}
                         </span>
-                        {user.role === 'superadmin' && (
-                            <Crown size={14} fill="#BF913B" className="text-[#BF913B] ml-2" />
-                        )}
                         </td>
                         <td className="px-6 py-4">
                          <div className="flex flex-col gap-1">
