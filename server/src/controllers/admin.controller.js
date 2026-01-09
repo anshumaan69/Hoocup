@@ -403,15 +403,21 @@ exports.updateUserStatus = async (req, res) => {
 // @access  Private/Admin
 exports.updateUserRole = async (req, res) => {
     try {
+        console.log(`[AdminDebug] Update Role Request: ID=${req.params.id}, Body=`, req.body);
+        
         const { role } = req.body; // 'admin' or 'user'
         const user = await User.findById(req.params.id);
 
         if (!user) {
+            console.log('[AdminDebug] User not found');
             return res.status(404).json({ message: 'User not found' });
         }
+        
+        console.log(`[AdminDebug] Found User: ${user.email}, Current Role: ${user.role}, Requester: ${req.user.id}`);
 
         // Prevent modifying own role
         if (user._id.toString() === req.user.id) {
+            console.log('[AdminDebug] Attempt to modify own role blocked');
             return res.status(403).json({ message: 'You cannot change your own role' });
         }
 

@@ -23,4 +23,7 @@ router.route('/users/:id')
 router.route('/users/:id/status')
     .patch(updateUserStatus);
 
+router.route('/users/:id/role')
+    .patch(updateUserRole);
+
 module.exports = router;
