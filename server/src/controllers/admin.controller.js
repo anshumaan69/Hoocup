@@ -395,11 +395,7 @@ exports.updateUserStatus = async (req, res) => {
         console.error('Update Status Error:', error);
         res.status(500).json({ message: 'Server Error' });
     }
-        res.status(200).json({ success: true, user });
-    } catch (error) {
-        console.error('Update Status Error:', error);
-        res.status(500).json({ message: 'Server Error' });
-    }
+
 };
 
 // @desc    Update user role (Make Admin / Remove Admin)
