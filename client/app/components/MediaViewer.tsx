@@ -8,7 +8,7 @@ interface MediaViewerProps {
     isOpen: boolean;
     onClose: () => void;
     initialIndex: number;
-    photos: { url: string; _id?: string }[];
+    photos: { url?: string; _id?: string; restricted?: boolean }[];
 }
 
 export default function MediaViewer({ isOpen, onClose, initialIndex, photos }: MediaViewerProps) {
@@ -80,17 +80,29 @@ export default function MediaViewer({ isOpen, onClose, initialIndex, photos }: M
 
             {/* Main Image */}
             <div 
-                className="relative w-full h-full max-w-7xl max-h-[90vh] mx-4"
+                className="relative w-full h-full max-w-7xl max-h-[90vh] mx-4 flex items-center justify-center"
                 onClick={(e) => e.stopPropagation()} // Prevent close on image click
             >
-                <Image
-                    src={currentPhoto.url}
-                    alt="Full screen media"
-                    fill
-                    className="object-contain"
-                    unoptimized
-                    priority
-                />
+                {currentPhoto.restricted ? (
+                     <div className="flex flex-col items-center gap-4 p-8 bg-zinc-900/80 rounded-2xl backdrop-blur-xl border border-white/10">
+                        <div className="p-4 bg-white/10 rounded-full backdrop-blur-md">
+                            <span className="text-4xl">🔒</span> 
+                        </div>
+                        <div className="text-center">
+                            <h3 className="text-xl font-bold text-white mb-2">Photo Restricted</h3>
+                            <p className="text-zinc-400 max-w-xs">You need to request access from the user to view this photo.</p>
+                        </div>
+                     </div>
+                ) : (
+                    <Image
+                        src={currentPhoto.url || ''}
+                        alt="Full screen media"
+                        fill
+                        className="object-contain"
+                        unoptimized
+                        priority
+                    />
+                )}
             </div>
 
             {/* Navigation - Right */}

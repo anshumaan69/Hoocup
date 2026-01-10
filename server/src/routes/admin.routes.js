@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { getAllUsers, createUser, deleteUser, updateUserStatus, getStats, uploadBulkUsers, saveBulkUsers, getBulkPreview, cancelBulkUpload, updateUserRole } = require('../controllers/admin.controller');
+const { getPendingRequests, updateAccessStatus } = require('../controllers/photoAccess.controller');
 const uploadMemory = require('../config/multerMemory'); // Reusing memory storage from auth routes
 const { protect, authorize } = require('../middleware/authMiddleware');
 
@@ -25,5 +26,8 @@ router.route('/users/:id/status')
 
 router.route('/users/:id/role')
     .patch(updateUserRole);
+
+router.get('/photo-access/requests', getPendingRequests);
+router.patch('/photo-access/requests/:id', updateAccessStatus);
 
 module.exports = router;

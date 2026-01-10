@@ -5,23 +5,44 @@ import { X, Star, Check, Trash2, UserRound } from 'lucide-react';
 interface PhotoCardProps {
   photo: {
     _id: string;
-    url: string;
+    url?: string;
     isProfile: boolean;
+    restricted?: boolean;
   };
   onSetProfile?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onRequestAccess?: () => void;
+  isPending?: boolean;
   readOnly?: boolean;
 }
 
-export default function PhotoCard({ photo, onSetProfile, onDelete, readOnly = false }: PhotoCardProps) {
+export default function PhotoCard({ photo, onSetProfile, onDelete, onRequestAccess, isPending, readOnly = false }: PhotoCardProps) {
   return (
     <div className={`relative group w-full aspect-square rounded-xl overflow-hidden border-2 transition-all ${photo.isProfile ? 'border-primary shadow-lg shadow-primary/20' : 'border-border hover:border-muted-foreground/50'}`}>
-      <Image
-        src={photo.url}
-        alt="User photo"
-        fill
-        className="object-cover"
-      />
+      {photo.restricted ? (
+            <div className="w-full h-full bg-zinc-900 border-none flex flex-col items-center justify-center relative p-4">
+                 <div className="absolute inset-0 bg-white/5" />
+                 <div className="z-10 flex flex-col items-center gap-2 text-center">
+                    <span className="text-2xl">🔒</span>
+                    {onRequestAccess && (
+                        <button 
+                            onClick={onRequestAccess}
+                            disabled={isPending}
+                            className={`mt-1 px-3 py-1 text-xs font-semibold rounded-full border transition-colors ${isPending ? 'bg-secondary/50 text-muted-foreground border-transparent cursor-default' : 'bg-primary/20 text-primary hover:bg-primary/30 border-primary/50'}`}
+                        >
+                            {isPending ? 'Pending' : 'Request'}
+                        </button>
+                    )}
+                 </div>
+            </div>
+      ) : (
+          <Image
+            src={photo.url || ''}
+            alt="User photo"
+            fill
+            className="object-cover"
+          />
+      )}
       
       {/* Overlay Actions */}
       {!readOnly && (

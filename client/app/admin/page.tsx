@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import api from '../services/api';
 import UserList from './components/UserList';
 import CreateUserModal from './components/CreateUserModal';
-import { Users, Plus, LayoutDashboard, Search, Home, LogOut } from 'lucide-react';
+import { Users, Plus, LayoutDashboard, Search, Home, LogOut, Lock } from 'lucide-react';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -112,6 +112,13 @@ export default function AdminDashboard() {
                 >
                     <Home size={18} />
                     Go to App
+                </button>
+                 <button 
+                    onClick={() => router.push('/admin/requests')}
+                    className="px-4 py-2 bg-blue-600/10 hover:bg-blue-600/20 text-blue-500 border border-blue-600/20 rounded-lg font-medium transition-colors flex items-center gap-2"
+                >
+                    <Lock size={18} />
+                    Requests
                 </button>
                  <button 
                     onClick={handleLogout}

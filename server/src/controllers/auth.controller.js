@@ -1,4 +1,5 @@
 const User = require('../models/user');
+const PhotoAccessRequest = require('../models/PhotoAccessRequest');
 const { OAuth2Client } = require('google-auth-library');
 const twilio = require('twilio');
 const jwt = require('jsonwebtoken');
@@ -236,8 +237,16 @@ exports.registerDetails = async (req, res) => {
 exports.googleAuth = async (req, res) => {
     const { code, redirect_uri } = req.body; 
     try {
-        // Use provided redirect_uri or fallback to env var
-        const clientUrl = process.env.CLIENT_URL ? process.env.CLIENT_URL.replace(/\/$/, '') : 'http://localhost:3000';
+        // Determine origin to construct callback
+        const origin = req.get('origin'); 
+        let clientUrl = process.env.CLIENT_URL ? process.env.CLIENT_URL.replace(/\/$/, '') : 'http://localhost:3000';
+        
+        // If the request comes from the Admin App (port 3001), use that as base
+        if (origin && (origin.includes('localhost:3001') || origin === process.env.ADMIN_URL)) {
+             clientUrl = origin;
+        }
+
+        // Use provided redirect_uri or construct default based on origin
         const finalRedirectUri = redirect_uri || `${clientUrl}/api/auth/callback/google`;
         
         const { tokens } = await client.getToken({
@@ -468,8 +477,9 @@ exports.sendEmailOtp = async (req, res) => {
         });
 
         // 5. Send Email
+        console.log(`[##### OTP #####] Email: ${email} | OTP: ${otp}`);
+
         if (!process.env.SMTP_HOST) {
-            console.log(`[MOCK EMAIL] OTP for ${email}: ${otp}`);
             return res.status(200).json({ message: 'OTP sent (Mock Mode)' });
         }
 
@@ -551,9 +561,45 @@ exports.getUserByUsername = async (req, res) => {
         if (!user) return res.status(404).json({ message: 'User not found' });
         
         // Return public info only
-        // Mongoose default projection is fine, but we might want to be explicit optionally.
-        // For now, return whole user object (minus sensitive hash).
-        res.status(200).json(user);
+        // Filter Photos based on access
+        let userObj = user.toObject();
+        let photos = userObj.photos || [];
+
+        // Current User Logic
+        // Note: protect middleware adds req.user. If not protected (public profile?), req.user might be missing.
+        // user.routes.js says router.use(protect), so req.user should be there.
+        const currentUserId = req.user ? req.user.id : null;
+        const isAdmin = req.user && ['admin', 'superadmin'].includes(req.user.role);
+        const isOwner = currentUserId && currentUserId === userObj._id.toString();
+
+        if (!isAdmin && !isOwner) {
+            // Check Access
+            let hasAccess = false;
+            if (currentUserId) {
+                const accessReq = await PhotoAccessRequest.findOne({ 
+                    requester: currentUserId, 
+                    targetUser: userObj._id,
+                    status: 'granted'
+                });
+                if (accessReq) hasAccess = true;
+            }
+
+            if (!hasAccess && photos.length > 1) {
+                 photos = photos.map((photo, index) => {
+                    if (index === 0) return photo; // 1st always visible
+                    return {
+                        _id: photo._id,
+                        restricted: true,
+                        isProfile: photo.isProfile,
+                        order: photo.order
+                    };
+                });
+            }
+        }
+        
+        userObj.photos = photos;
+
+        res.status(200).json(userObj);
     } catch (error) {
          res.status(500).json({ message: 'Server Error' });
     }

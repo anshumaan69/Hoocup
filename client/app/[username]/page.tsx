@@ -28,6 +28,10 @@ function ProfileContent() {
     
     // Photo State
     const [photos, setPhotos] = useState<any[]>([]);
+    
+    // Access Request State
+    const [accessStatus, setAccessStatus] = useState<'none' | 'pending' | 'granted' | 'rejected'>('none');
+    const [requestingAccess, setRequestingAccess] = useState(false);
 
     const updateProfilePhotoLocal = (url: string) => {
         // Update the avatar preview immediately if a new profile photo is set
@@ -52,9 +56,19 @@ function ProfileContent() {
                  if (res.data.photos) {
                      setPhotos(res.data.photos);
                  }
+                 return res.data;
              } catch (error) {
                  console.error('Failed to fetch profile', error);
              }
+        };
+
+        const fetchAccessStatus = async (targetId: string) => {
+            try {
+                const res = await api.get(`/users/photo-access/status/${targetId}`);
+                setAccessStatus(res.data.status);
+            } catch (error) {
+                console.error('Failed to fetch access status', error);
+            }
         };
 
         // Fetch Me (for ownership check)
@@ -75,7 +89,15 @@ function ProfileContent() {
              }
         };
 
-        Promise.all([fetchProfile(), fetchMe()]).finally(() => setLoading(false));
+        Promise.all([fetchProfile(), fetchMe()]).then(([profileData, _]) => {
+             if (profileData && profileData._id) {
+                 // Only fetch access status if we are not the owner (handled by checking currentUser later, or just fetch comfortably)
+                 // Or better, fetch logic runs if we have a profile.
+                 // Ideally check if currentUser !== profileData._id, but currentUser might not be set yet.
+                 // We'll rely on backend returning 'none' or valid status.
+                 fetchAccessStatus(profileData._id);
+             }
+        }).finally(() => setLoading(false));
     }, [username]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -152,6 +174,25 @@ function ProfileContent() {
              alert(msg);
         } finally {
             setUploading(false);
+        }
+    };
+
+    const handleRequestAccess = async () => {
+        if (!profile) return;
+        setRequestingAccess(true);
+        try {
+            await api.post('/users/photo-access/request', { targetUserId: profile._id });
+            setAccessStatus('pending');
+            alert('Access request sent to admin');
+        } catch (error: any) {
+            console.error('Request failed', error);
+            alert(error.response?.data?.message || 'Failed to request access');
+            // If re-requesting was successful, status might be pending now
+            if (error.response?.data?.message === 'Access request re-submitted') {
+                 setAccessStatus('pending');
+            }
+        } finally {
+            setRequestingAccess(false);
         }
     };
 
@@ -245,6 +286,8 @@ function ProfileContent() {
                                     key={photo._id || idx} 
                                     photo={photo} 
                                     readOnly={true} 
+                                    onRequestAccess={handleRequestAccess}
+                                    isPending={accessStatus === 'pending' || requestingAccess}
                                 />
                             )) : (
                                 <p className="text-muted-foreground col-span-full text-center py-4 bg-secondary/30 rounded-lg border border-dashed border-border">No photos uploaded</p>

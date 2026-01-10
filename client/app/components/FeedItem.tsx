@@ -12,7 +12,7 @@ interface FeedItemProps {
         username: string;
         avatar: string;
         bio: string;
-        photos: { url: string; _id?: string }[];
+        photos: { url?: string; _id?: string; restricted?: boolean }[];
     };
 }
 
@@ -62,16 +62,35 @@ export default function FeedItem({ user }: FeedItemProps) {
             {/* Media Carousel */}
             <div 
                 className="w-full relative aspect-[4/5] bg-black group cursor-pointer"
-                onClick={() => setIsViewerOpen(true)}
+                onClick={() => {
+                    if (!currentPhoto.restricted) setIsViewerOpen(true);
+                }}
             > 
                 {/* Keep backend black for media to standout, or use bg-muted */}
-                <Image 
-                    src={currentPhoto.url} 
-                    alt={`${user.username} photo`} 
-                    fill 
-                    className="object-contain" // Contain ensures whole image is seen
-                    unoptimized
-                />
+                {currentPhoto.restricted ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900 absolute inset-0">
+                         <div className="absolute inset-0 bg-white/5 backdrop-blur-3xl" />
+                         <div className="z-10 flex flex-col items-center gap-2 p-4 text-center">
+                            <div className="p-3 bg-white/10 rounded-full backdrop-blur-md">
+                                <span className="text-2xl">🔒</span> 
+                            </div>
+                            <p className="text-white font-medium">Photo Restricted</p>
+                            <Link href={`/${user.username}`}>
+                                <button className="mt-2 px-4 py-1.5 bg-primary/20 text-primary hover:bg-primary/30 text-sm font-semibold rounded-full border border-primary/50 transition-colors">
+                                    Request Access
+                                </button>
+                            </Link>
+                         </div>
+                    </div>
+                ) : (
+                    <Image 
+                        src={currentPhoto.url || ''} 
+                        alt={`${user.username} photo`} 
+                        fill 
+                        className="object-contain" // Contain ensures whole image is seen
+                        unoptimized
+                    />
+                )}
 
                 {/* Navigation Arrows */}
                 {user.photos.length > 1 && (

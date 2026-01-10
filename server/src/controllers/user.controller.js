@@ -1,4 +1,5 @@
 const User = require('../models/user');
+const PhotoAccessRequest = require('../models/PhotoAccessRequest');
 
 // @desc    Get Feed Users (Users with photos)
 // @route   GET /api/users/feed
@@ -27,6 +28,21 @@ exports.getFeed = async (req, res) => {
             .limit(limit);
 
         // Transform data ensures we have a nice list of photos for the carousel
+        // Fetch access requests for these users if not admin/superadmin
+        let grantedUserIds = new Set();
+        const isAdmin = ['admin', 'superadmin'].includes(req.user.role);
+        
+        if (!isAdmin) {
+             const grantedRequests = await PhotoAccessRequest.find({
+                requester: req.user.id,
+                status: 'granted',
+                targetUser: { $in: users.map(u => u._id) }
+             }).select('targetUser');
+             
+             grantedRequests.forEach(req => grantedUserIds.add(req.targetUser.toString()));
+        }
+
+        // Transform data ensures we have a nice list of photos for the carousel
         const feedData = users.map(user => {
             const userObj = user.toObject();
             
@@ -50,8 +66,24 @@ exports.getFeed = async (req, res) => {
                 }
             }
 
-            // Filter out any broken structure if necessary, though schema guarantees structure usually
+            // FILTERING LOGIC
+            const hasAccess = isAdmin || grantedUserIds.has(userObj._id.toString());
             
+            if (!hasAccess && photos.length > 1) {
+                photos = photos.map((photo, index) => {
+                    // First photo is always visible
+                    if (index === 0) return photo;
+                    
+                    // Respond with metadata placeholder
+                    return {
+                        _id: photo._id,
+                        restricted: true,
+                        isProfile: photo.isProfile,
+                        order: photo.order
+                    };
+                });
+            }
+
             return {
                 _id: userObj._id,
                 username: userObj.username,
