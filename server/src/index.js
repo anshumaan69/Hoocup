@@ -60,7 +60,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/avatars', avatarRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/cost', costRoutes);
+
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
