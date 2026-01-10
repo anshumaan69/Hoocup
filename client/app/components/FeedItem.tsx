@@ -69,19 +69,28 @@ export default function FeedItem({ user }: FeedItemProps) {
                         {user.photos.map((photo, index) => (
                             <CarouselItem key={index} className="pl-0 h-full relative group">
                                 {photo.restricted ? (
-                                    <div className="w-full h-full relative">
-                                        {/* Blurred Background Image (Optional: use placeholder if URL hidden) */}
-                                        <div className="absolute inset-0 bg-primary/10 backdrop-blur-3xl filter blur-3xl scale-110 opacity-50" />
+                                    <div className="w-full h-full relative overflow-hidden">
+                                        {/* Blurred Background: Uses the ACTUAL restricted image (blurred by backend) */}
+                                        <Image
+                                            src={photo.url || '/default-avatar.png'} // Backend now sends the blurred URL here
+                                            alt="Restricted Content"
+                                            fill
+                                            className="object-cover blur-md scale-110 opacity-60" // Add smooth blur on top of the pixelated backend blur
+                                            unoptimized
+                                        />
                                         
+                                        {/* Dark Overlay for contrast */}
+                                        <div className="absolute inset-0 bg-black/40" />
+
                                         {/* Restricted Overlay */}
-                                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-md p-6 text-center">
-                                            <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center mb-4 backdrop-blur-sm border border-white/20">
-                                                <span className="text-3xl">🔒</span>
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-10">
+                                            <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center mb-4 backdrop-blur-md border border-white/20 shadow-lg">
+                                                <span className="text-3xl drop-shadow-md">🔒</span>
                                             </div>
-                                            <h3 className="text-white font-bold text-lg mb-1">Private Photo</h3>
-                                            <p className="text-white/70 text-sm mb-4">Request access to view this photo</p>
+                                            <h3 className="text-white font-bold text-lg mb-1 tracking-tight drop-shadow-md">Private Photo</h3>
+                                            <p className="text-white/80 text-sm mb-4 font-medium drop-shadow-md">Request access to view</p>
                                             <Link href={`/${user.username}`}>
-                                                <Button size="sm" className="rounded-full bg-white/20 hover:bg-white/30 text-white border-white/10 backdrop-blur-md">
+                                                <Button size="sm" className="rounded-full bg-white/20 hover:bg-white/30 text-white border-white/10 backdrop-blur-md shadow-lg transition-all hover:scale-105">
                                                     Request Access
                                                 </Button>
                                             </Link>

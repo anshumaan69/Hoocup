@@ -312,29 +312,38 @@ function ProfileContent() {
                                         {photos.map((photo, index) => (
                                             <CarouselItem key={index} className="pl-0 h-full relative group">
                                                  {photo.restricted ? (
-                                                    <div className="w-full h-full relative">
-                                                        {/* Blurred Background */}
-                                                        <div className="absolute inset-0 bg-primary/20 backdrop-blur-3xl filter blur-[40px] scale-110 opacity-60" />
+                                                    <div className="w-full h-full relative overflow-hidden">
+                                                        {/* Blurred Background: Uses the ACTUAL restricted image (blurred by backend) */}
+                                                        <Image
+                                                            src={photo.url || '/default-avatar.png'}
+                                                            alt="Restricted Content"
+                                                            fill
+                                                            className="object-cover blur-md scale-110 opacity-60"
+                                                            unoptimized
+                                                        />
+                                                        
+                                                        {/* Dark Overlay */}
+                                                        <div className="absolute inset-0 bg-black/40" />
                                                         
                                                         {/* Lock Overlay */}
-                                                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-md p-6 text-center z-10">
+                                                        <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-10">
                                                             <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-white/10 to-transparent flex items-center justify-center mb-4 backdrop-blur-sm border border-white/20 shadow-lg">
                                                                 <span className="text-4xl filter drop-shadow-md">🔒</span>
                                                             </div>
-                                                            <h3 className="text-white font-bold text-xl mb-2 tracking-tight">Private Content</h3>
+                                                            <h3 className="text-white font-bold text-xl mb-2 tracking-tight drop-shadow-md">Private Content</h3>
                                                             {accessStatus === 'pending' ? (
-                                                                <Button disabled variant="secondary" className="rounded-full px-6">
+                                                                <Button disabled variant="secondary" className="rounded-full px-6 shadow-lg">
                                                                     Request Pending...
                                                                 </Button>
                                                             ) : accessStatus === 'rejected' ? (
-                                                                <Button disabled variant="destructive" className="rounded-full px-6">
+                                                                <Button disabled variant="destructive" className="rounded-full px-6 shadow-lg">
                                                                     Access Denied
                                                                 </Button>
                                                             ) : (
                                                                 <Button 
                                                                     onClick={handleRequestAccess}
                                                                     disabled={requestingAccess}
-                                                                    className="rounded-full px-8 bg-white text-black hover:bg-white/90 font-bold"
+                                                                    className="rounded-full px-8 bg-white text-black hover:bg-white/90 font-bold shadow-lg hover:scale-105 transition-transform"
                                                                 >
                                                                     {requestingAccess ? 'Requesting...' : 'Request Access'}
                                                                 </Button>

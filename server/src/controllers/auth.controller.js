@@ -587,6 +587,20 @@ exports.getUserByUsername = async (req, res) => {
                 if (accessReq) hasAccess = true;
             }
 
+const getBlurredUrl = (url) => {
+    if (!url) return '';
+    // Check if it's a Cloudinary URL
+    if (url.includes('cloudinary.com')) {
+        // Insert blur transformation
+        // Pattern: .../upload/v123456/... -> .../upload/e_blur:2000,q_1,f_auto/v123456/...
+        // "q_1" reduces quality drastically to save bandwidth and prevent reverse engineering
+        return url.replace('/upload/', '/upload/e_blur:2000,q_1,f_auto/'); 
+    }
+    return url; // Fallback for non-cloudinary images
+};
+
+// ...
+
             if (!hasAccess && photos.length > 1) {
                  photos = photos.map((photo, index) => {
                     if (index === 0) return photo; // 1st always visible (now guaranteed to be profile photo)
@@ -594,7 +608,8 @@ exports.getUserByUsername = async (req, res) => {
                         _id: photo._id,
                         restricted: true,
                         isProfile: photo.isProfile,
-                        order: photo.order
+                        order: photo.order,
+                        url: getBlurredUrl(photo.url) // Return the blurred version!
                     };
                 });
             }

@@ -60,12 +60,19 @@ exports.getFeed = async (req, res) => {
                     // First photo is always visible
                     if (index === 0) return photo;
                     
-                    // Respond with metadata placeholder
+                    // Generate Blurred Version
+                    let blurredUrl = '';
+                    if (photo.url && photo.url.includes('cloudinary.com')) {
+                         blurredUrl = photo.url.replace('/upload/', '/upload/e_blur:2000,q_1,f_auto/');
+                    }
+
+                    // Respond with restricted data + blurred URL
                     return {
                         _id: photo._id,
                         restricted: true,
                         isProfile: photo.isProfile,
-                        order: photo.order
+                        order: photo.order,
+                        url: blurredUrl 
                     };
                 });
             }
