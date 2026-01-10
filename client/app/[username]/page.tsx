@@ -4,7 +4,20 @@ import { Suspense, useEffect, useState } from 'react';
 import api from '../services/api';
 import { useRouter, useParams } from 'next/navigation';
 import PhotoUploadGrid from '../components/PhotoUploadGrid';
-import PhotoCard from '../components/PhotoCard';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel';
+import Image from 'next/image';
+import { Heart, MessageCircle, Share2, ArrowLeft, MoreVertical, MapPin, Calendar, Mail, Shield } from 'lucide-react';
+import MediaViewer from '../components/MediaViewer';
 
 function ProfileContent() {
     const { username } = useParams();
@@ -29,19 +42,20 @@ function ProfileContent() {
     // Photo State
     const [photos, setPhotos] = useState<any[]>([]);
     
+    // Media Viewer
+    const [isViewerOpen, setIsViewerOpen] = useState(false);
+    const [viewerIndex, setViewerIndex] = useState(0);
+
     // Access Request State
     const [accessStatus, setAccessStatus] = useState<'none' | 'pending' | 'granted' | 'rejected'>('none');
     const [requestingAccess, setRequestingAccess] = useState(false);
 
     const updateProfilePhotoLocal = (url: string) => {
-        // Update the avatar preview immediately if a new profile photo is set
         setAvatarPreview(url);
-        // Also update the profile state to reflected confirmed change
         setProfile((prev: any) => ({ ...prev, avatar: url }));
     };
 
     useEffect(() => {
-        // Fetch Profile Data
         const fetchProfile = async () => {
              try {
                  const res = await api.get(`/users/${username}`);
@@ -71,18 +85,9 @@ function ProfileContent() {
             }
         };
 
-        // Fetch Me (for ownership check)
         const fetchMe = async () => {
              try {
-                const res = await api.get('/auth/me'); // Ensure correct path (it was /me in auth routes, but wait, routes were at /api/auth or /api/users?)
-                // API Structure Check:
-                // server/index.js -> app.use('/api/auth', authRoutes);
-                // auth.routes.js -> router.get('/me', protect, getMe);
-                // So path SHOULD be /auth/me. 
-                // Previous code in page.tsx had: api.get('/me'). 
-                // api.ts baseURL is /api. So api.get('/me') -> /api/me. 
-                // BUT endpoint is /api/auth/me!
-                
+                const res = await api.get('/auth/me');
                 setCurrentUser(res.data);
              } catch (e) {
                 console.error('Fetch Me failed:', e);
@@ -91,16 +96,12 @@ function ProfileContent() {
 
         Promise.all([fetchProfile(), fetchMe()]).then(([profileData, _]) => {
              if (profileData && profileData._id) {
-                 // Only fetch access status if we are not the owner (handled by checking currentUser later, or just fetch comfortably)
-                 // Or better, fetch logic runs if we have a profile.
-                 // Ideally check if currentUser !== profileData._id, but currentUser might not be set yet.
-                 // We'll rely on backend returning 'none' or valid status.
                  fetchAccessStatus(profileData._id);
              }
         }).finally(() => setLoading(false));
     }, [username]);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
@@ -108,7 +109,6 @@ function ProfileContent() {
         const file = e.target.files?.[0];
         if (!file) return;
         
-        // Basic Validation Reuse
          if (!file.type.startsWith("image/")) {
             alert("Only images allowed");
             return;
@@ -128,7 +128,6 @@ function ProfileContent() {
       canvas.width = 512;
       canvas.height = 512;
       const ctx = canvas.getContext("2d")!;
-      // Draw white background mainly for transparent PNGs converted to WebP (optional but good)
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(0, 0, 512, 512);
       ctx.drawImage(bitmap, 0, 0, 512, 512);
@@ -142,27 +141,17 @@ function ProfileContent() {
         setUploading(true);
         try {
             let avatarUrl = profile.avatar;
-
-            // 1. Upload Avatar if changed
             if (avatar) {
                 const compressedBlob = await compressImage(avatar);
                 const formData = new FormData();
                 formData.append("avatar", compressedBlob);
-
-                // Use fetch directly for FormData to avoid Content-Type header issues with axios wrappers if not handled automatically
-                // But our api client sets Content-Type: application/json by default.
-                // It's safer to use api.post with Content-Type: multipart/form-data OR just let axios handle it by passing FormData.
-                // However, our api interceptor might force JSON.
-                // Let's use axios instance 'api' but override headers.
                 
                 const res = await api.post('/auth/avatar', formData, {
                     headers: { 'Content-Type': 'multipart/form-data' } 
                 });
-                
                 avatarUrl = res.data.avatar; 
             }
 
-            // 2. Update other details
             const res = await api.post('/auth/register-details', { ...formData, avatar: avatarUrl });
             setProfile(res.data.user);
             setIsEditing(false);
@@ -187,7 +176,6 @@ function ProfileContent() {
         } catch (error: any) {
             console.error('Request failed', error);
             alert(error.response?.data?.message || 'Failed to request access');
-            // If re-requesting was successful, status might be pending now
             if (error.response?.data?.message === 'Access request re-submitted') {
                  setAccessStatus('pending');
             }
@@ -196,146 +184,250 @@ function ProfileContent() {
         }
     };
 
-    if (loading) return <div className="flex justify-center items-center h-screen bg-background text-foreground">Loading...</div>;
+    const onPhotoClick = (index: number, restricted?: boolean) => {
+        if (!restricted) {
+            setViewerIndex(index);
+            setIsViewerOpen(true);
+        }
+    };
+
+    if (loading) return <div className="flex justify-center items-center h-screen bg-background text-foreground animate-pulse">Loading...</div>;
     if (!profile) return <div className="flex justify-center items-center h-screen bg-background text-foreground">User not found</div>;
 
     const isOwner = currentUser && (currentUser._id === profile._id || currentUser.username === profile.username);
-    console.log('IsOwner Debug:', { currentUser: currentUser?._id, profile: profile?._id, isOwner });
 
     return (
-        <div className="flex min-h-screen flex-col items-center justify-center bg-background text-foreground p-8">
-            <div className="w-full max-w-2xl bg-card border border-border rounded-xl p-8 shadow-2xl relative">
+        <div className="flex min-h-screen flex-col items-center bg-background text-foreground pb-20">
+            {/* Top Bar */}
+            <header className="w-full fixed top-0 left-0 bg-background/80 backdrop-blur-md z-50 border-b border-border/50 px-4 py-3 flex items-center justify-between">
+                <Button variant="ghost" size="icon" onClick={() => router.push('/home')}>
+                    <ArrowLeft className="w-6 h-6" />
+                </Button>
+                <span className="font-bold text-lg">@{profile.username}</span>
+                {isOwner && (
+                    <Button variant="ghost" size="icon" onClick={() => setIsEditing(!isEditing)}>
+                        <MoreVertical className="w-6 h-6" />
+                    </Button>
+                )}
+                {!isOwner && <div className="w-10" />}
+            </header>
+
+            <div className="w-full max-w-md pt-20 px-4 space-y-6">
                 
-                {/* Header / Avatar */}
-                <div className="flex flex-col items-center mb-8">
-                     <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-muted shadow-xl mb-4 group ring-2 ring-transparent group-hover:ring-primary transition-all">
-                        <img 
-                            src={avatarPreview || profile.profilePhoto || profile.avatar || '/default-avatar.png'} 
-                            alt={profile.username} 
-                            className="w-full h-full object-cover transition-transform group-hover:scale-110"
-                            onError={(e) => { e.currentTarget.src = `https://ui-avatars.com/api/?name=${profile.first_name}&background=random`; }}
-                        />
-                        {isEditing && (
-                             <label className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
-                                <span className="text-xs text-white">Change</span>
-                                <input type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} />
-                             </label>
-                        )}
+                {/* Profile Header */}
+                <div className="flex flex-col items-center">
+                     <div className="relative w-28 h-28 rounded-full p-1 bg-gradient-to-tr from-primary to-purple-600 mb-4 shadow-xl shadow-primary/20">
+                        <div className="w-full h-full rounded-full overflow-hidden border-4 border-black relative group">
+                            <img 
+                                src={avatarPreview || profile.profilePhoto || profile.avatar || '/default-avatar.png'} 
+                                alt={profile.username} 
+                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                onError={(e) => { e.currentTarget.src = `https://ui-avatars.com/api/?name=${profile.first_name}&background=random`; }}
+                            />
+                             {isEditing && (
+                                 <label className="absolute inset-0 bg-black/60 flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <span className="text-xs font-bold text-white">CHANGE</span>
+                                    <input type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} />
+                                 </label>
+                            )}
+                        </div>
                      </div>
 
                      {isEditing ? (
                         <div className="flex gap-2 mb-2 w-full justify-center">
-                            <input name="first_name" value={formData.first_name} onChange={handleChange} className="bg-input border border-border p-2 rounded text-center w-32 focus:ring-1 focus:ring-primary outline-none" placeholder="First Name" />
-                            <input name="last_name" value={formData.last_name} onChange={handleChange} className="bg-input border border-border p-2 rounded text-center w-32 focus:ring-1 focus:ring-primary outline-none" placeholder="Last Name" />
+                            <Input name="first_name" value={formData.first_name} onChange={handleChange} className="text-center w-32" placeholder="First Name" />
+                            <Input name="last_name" value={formData.last_name} onChange={handleChange} className="text-center w-32" placeholder="Last Name" />
                         </div>
                      ) : (
-                        <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 text-transparent bg-clip-text">
+                        <h1 className="text-2xl font-bold text-white">
                             {profile.first_name} {profile.last_name}
                         </h1>
                      )}
                      
-                     <p className="text-muted-foreground">@{profile.username}</p>
-                     
+                     <div className="flex items-center gap-2 mt-1 mb-4">
+                         <span className="px-3 py-1 bg-secondary/50 rounded-full text-xs font-medium text-muted-foreground border border-border">
+                             @{profile.username}
+                         </span>
+                         {accessStatus === 'granted' && (
+                             <span className="px-3 py-1 bg-green-500/10 text-green-500 rounded-full text-xs font-medium border border-green-500/20 flex items-center gap-1">
+                                 <Shield size={10} /> Verified Access
+                             </span>
+                         )}
+                     </div>
+
                      {isEditing ? (
                          <textarea 
                             name="bio" 
                             value={formData.bio} 
-                            onChange={(e) => handleChange(e as any)} 
-                            className="bg-input border border-border p-2 rounded w-full mt-4 text-center h-20 resize-none focus:ring-1 focus:ring-primary outline-none" 
-                            placeholder="Bio..."
+                            onChange={handleChange} 
+                            className="bg-card border border-input p-3 rounded-xl w-full text-center h-24 resize-none focus:ring-1 focus:ring-primary outline-none transition-all text-sm" 
+                            placeholder="Write something about yourself..."
                             maxLength={150} 
                         />
                      ) : (
-                        <p className="text-zinc-300 mt-2 text-center max-w-sm">{profile.bio}</p>
+                        <p className="text-zinc-400 text-center text-sm leading-relaxed max-w-xs cursor-default hover:text-white transition-colors">
+                            {profile.bio || "No bio yet."}
+                        </p>
                      )}
                 </div>
 
-                {/* Details Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <div className="bg-secondary/50 p-4 rounded-lg border border-border">
-                        <span className="text-muted-foreground text-sm block mb-1">Email {isOwner ? '(Private)' : ''}</span>
-                        {isOwner ? (
-                             <span className="text-lg">{currentUser?.email || 'N/A'}</span>
-                        ) : (
-                             <span className="text-lg blur-sm select-none text-muted-foreground">Hidden</span>
-                        )}
-                    </div>
-                    <div className="bg-secondary/50 p-4 rounded-lg border border-border">
-                         <span className="text-muted-foreground text-sm block mb-1">Date of Birth</span>
-                         {isEditing ? (
-                            <input type="date" name="dob" value={formData.dob} onChange={handleChange} className="bg-input text-foreground p-1 rounded w-full border border-border focus:ring-1 focus:ring-primary outline-none" />
-                         ) : (
-                            <span className="text-lg">{profile.dob ? new Date(profile.dob).toLocaleDateString() : 'N/A'}</span>
-                         )}
-                    </div>
-                </div>
-
-                {/* Photos Section */}
-                <div className="mb-8 w-full">
-                    <h2 className="text-xl font-semibold mb-4 text-zinc-300">Photos</h2>
-                    {isEditing ? (
-                        <PhotoUploadGrid 
-                            photos={photos} 
-                            setPhotos={setPhotos} 
-                            updateProfilePhotoLocal={updateProfilePhotoLocal} 
-                        />
-                    ) : (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
-                            {photos.length > 0 ? photos.map((photo, idx) => (
-                                <PhotoCard 
-                                    key={photo._id || idx} 
-                                    photo={photo} 
-                                    readOnly={true} 
-                                    onRequestAccess={handleRequestAccess}
-                                    isPending={accessStatus === 'pending' || requestingAccess}
-                                />
-                            )) : (
-                                <p className="text-muted-foreground col-span-full text-center py-4 bg-secondary/30 rounded-lg border border-dashed border-border">No photos uploaded</p>
-                            )}
+                {/* Main Photos Section */}
+                {isEditing ? (
+                    <Card>
+                        <CardContent className="pt-6">
+                            <h2 className="text-sm font-semibold mb-4 text-muted-foreground uppercase tracking-wider">Manage Photos</h2>
+                            <PhotoUploadGrid 
+                                photos={photos} 
+                                setPhotos={setPhotos} 
+                                updateProfilePhotoLocal={updateProfilePhotoLocal} 
+                            />
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <div className="space-y-4">
+                        <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl bg-black border border-border/50">
+                             {photos.length === 0 ? (
+                                <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground p-6 text-center">
+                                    <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-3">
+                                        <Share2 className="w-6 h-6 opacity-50" />
+                                    </div>
+                                    <p>No photos uploaded yet</p>
+                                </div>
+                             ) : (
+                                <Carousel className="w-full h-full">
+                                    <CarouselContent className="h-full ml-0">
+                                        {photos.map((photo, index) => (
+                                            <CarouselItem key={index} className="pl-0 h-full relative group">
+                                                 {photo.restricted ? (
+                                                    <div className="w-full h-full relative">
+                                                        {/* Blurred Background */}
+                                                        <div className="absolute inset-0 bg-primary/20 backdrop-blur-3xl filter blur-[40px] scale-110 opacity-60" />
+                                                        
+                                                        {/* Lock Overlay */}
+                                                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-md p-6 text-center z-10">
+                                                            <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-white/10 to-transparent flex items-center justify-center mb-4 backdrop-blur-sm border border-white/20 shadow-lg">
+                                                                <span className="text-4xl filter drop-shadow-md">🔒</span>
+                                                            </div>
+                                                            <h3 className="text-white font-bold text-xl mb-2 tracking-tight">Private Content</h3>
+                                                            {accessStatus === 'pending' ? (
+                                                                <Button disabled variant="secondary" className="rounded-full px-6">
+                                                                    Request Pending...
+                                                                </Button>
+                                                            ) : accessStatus === 'rejected' ? (
+                                                                <Button disabled variant="destructive" className="rounded-full px-6">
+                                                                    Access Denied
+                                                                </Button>
+                                                            ) : (
+                                                                <Button 
+                                                                    onClick={handleRequestAccess}
+                                                                    disabled={requestingAccess}
+                                                                    className="rounded-full px-8 bg-white text-black hover:bg-white/90 font-bold"
+                                                                >
+                                                                    {requestingAccess ? 'Requesting...' : 'Request Access'}
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div 
+                                                        className="w-full h-full relative cursor-pointer"
+                                                        onClick={() => onPhotoClick(index, photo.restricted)}
+                                                    >
+                                                        <Image 
+                                                            src={photo.url || ''} 
+                                                            alt={`Photo ${index + 1}`} 
+                                                            fill 
+                                                            className="object-cover"
+                                                            priority={index === 0}
+                                                            unoptimized
+                                                        />
+                                                        {/* Gradient Overlay for style */}
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                    </div>
+                                                )}
+                                            </CarouselItem>
+                                        ))}
+                                    </CarouselContent>
+                                    {photos.length > 1 && (
+                                        <>
+                                            <CarouselPrevious className="left-4 bg-black/50 border-white/10 text-white hover:bg-black/70 decoration-clone" />
+                                            <CarouselNext className="right-4 bg-black/50 border-white/10 text-white hover:bg-black/70" />
+                                        </>
+                                    )}
+                                </Carousel>
+                             )}
                         </div>
-                    )}
+
+                        {/* Interactive Buttons */}
+                        <div className="flex justify-center gap-6 py-2">
+                             <Button variant="outline" size="lg" className="rounded-full h-14 w-14 p-0 border-2 hover:border-pink-500 hover:text-pink-500 hover:bg-pink-500/10 transition-all shadow-lg">
+                                 <Heart className="w-7 h-7" />
+                             </Button>
+                             <Button variant="outline" size="lg" className="rounded-full h-14 w-14 p-0 border-2 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-500/10 transition-all shadow-lg">
+                                 <MessageCircle className="w-7 h-7" />
+                             </Button>
+                             <Button variant="outline" size="lg" className="rounded-full h-14 w-14 p-0 border-2 hover:border-green-500 hover:text-green-500 hover:bg-green-500/10 transition-all shadow-lg">
+                                 <Share2 className="w-7 h-7" />
+                             </Button>
+                        </div>
+                    </div>
+                )}
+
+                {/* About Grid */}
+                <div className="grid grid-cols-2 gap-4">
+                    <Card className="bg-secondary/20 border-border/50">
+                        <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500">
+                                <Mail size={16} />
+                            </div>
+                            <div>
+                                <span className="text-xs text-muted-foreground uppercase tracking-widest">Email</span>
+                                <p className="text-sm font-medium mt-1 truncate max-w-[120px]">
+                                    {isOwner || accessStatus === 'granted' ? (currentUser?.email || 'Viewable') : 'Hidden'}
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card className="bg-secondary/20 border-border/50">
+                         <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-500">
+                                <Calendar size={16} />
+                            </div>
+                             <div>
+                                <span className="text-xs text-muted-foreground uppercase tracking-widest">Born</span>
+                                {isEditing ? (
+                                    <input type="date" name="dob" value={formData.dob} onChange={handleChange} className="bg-transparent border-b border-border text-xs w-full text-center mt-1 outline-none" />
+                                ) : (
+                                    <p className="text-sm font-medium mt-1">
+                                        {profile.dob ? new Date(profile.dob).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A'}
+                                    </p>
+                                )}
+                             </div>
+                        </CardContent>
+                    </Card>
                 </div>
 
-                {/* Actions */}
-                <div className="flex justify-center gap-4">
-                    {isOwner && !isEditing && (
-                        <button 
-                            onClick={() => setIsEditing(true)}
-                            className="bg-primary px-6 py-2 rounded-full font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-lg shadow-primary/25"
-                        >
-                            Edit Profile
-                        </button>
-                    )}
-                    {isOwner && isEditing && (
-                        <>
-                            <button 
-                                onClick={handleSave}
-                                disabled={uploading}
-                                className="bg-green-600 px-6 py-2 rounded-full font-semibold text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
-                            >
-                                {uploading ? 'Saving...' : 'Save Changes'}
-                            </button>
-                            <button 
-                                onClick={() => setIsEditing(false)}
-                                className="bg-secondary px-6 py-2 rounded-full font-semibold text-secondary-foreground hover:bg-secondary/80 transition-colors"
-                            >
-                                Cancel
-                            </button>
-                        </>
-                    )}
-                     <button 
-                        onClick={() => router.push('/home')}
-                        className="bg-secondary px-6 py-2 rounded-full font-semibold text-secondary-foreground hover:bg-secondary/80 transition-colors border border-border"
-                    >
-                        Back Home
-                    </button>
-                </div>
-
+                {isOwner && isEditing && (
+                    <div className="flex flex-col gap-3 pt-4">
+                        <Button onClick={handleSave} disabled={uploading} className="w-full h-12 text-lg rounded-xl bg-primary hover:bg-primary/90 font-bold shadow-lg shadow-primary/25">
+                            {uploading ? 'Saving...' : 'Save Changes'}
+                        </Button>
+                        <Button variant="ghost" onClick={() => setIsEditing(false)} className="w-full text-muted-foreground">
+                            Cancel
+                        </Button>
+                    </div>
+                )}
             </div>
+
+            <MediaViewer 
+                isOpen={isViewerOpen}
+                onClose={() => setIsViewerOpen(false)}
+                initialIndex={viewerIndex}
+                photos={photos}
+            />
         </div>
     );
 }
-
 export default function ProfilePage() {
     return (
         <Suspense fallback={<div>Loading...</div>}>
