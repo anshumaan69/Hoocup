@@ -49,22 +49,8 @@ exports.getFeed = async (req, res) => {
             // Ensure photos array exists
             let photos = userObj.photos || [];
 
-            // If profilePhoto exists, make sure it's the first one in the list (or added if missing)
-            if (userObj.profilePhoto) {
-                // Check if it's already in photos to avoid dupe (simple check by url string match might be enough)
-                const exists = photos.some(p => p.url === userObj.profilePhoto);
-                if (!exists) {
-                    // Prepend as main photo
-                    photos.unshift({
-                        url: userObj.profilePhoto,
-                        isProfile: true,
-                        _id: 'main_profile'
-                    });
-                } else {
-                    // Move profile photo to front
-                    photos.sort((a, b) => (a.url === userObj.profilePhoto ? -1 : 1));
-                }
-            }
+            // Sort photos: Profile photo (isProfile: true) must be first (index 0)
+            photos.sort((a, b) => (b.isProfile ? 1 : 0) - (a.isProfile ? 1 : 0));
 
             // FILTERING LOGIC
             const hasAccess = isAdmin || grantedUserIds.has(userObj._id.toString());

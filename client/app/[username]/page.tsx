@@ -269,6 +269,19 @@ function ProfileContent() {
                             {profile.bio || "No bio yet."}
                         </p>
                      )}
+                     
+                     {isOwner && !isEditing && (
+                        <div className="mt-4">
+                            <Button 
+                                onClick={() => setIsEditing(true)}
+                                size="sm" 
+                                variant="outline" 
+                                className="rounded-full px-6 border-white/20 hover:bg-white/10 hover:text-white text-xs uppercase tracking-wide"
+                            >
+                                Edit Profile
+                            </Button>
+                        </div>
+                     )}
                 </div>
 
                 {/* Main Photos Section */}

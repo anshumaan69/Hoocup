@@ -565,6 +565,9 @@ exports.getUserByUsername = async (req, res) => {
         let userObj = user.toObject();
         let photos = userObj.photos || [];
 
+        // Sort photos: Profile photo (isProfile: true) must be first (index 0)
+        photos.sort((a, b) => (b.isProfile ? 1 : 0) - (a.isProfile ? 1 : 0));
+
         // Current User Logic
         // Note: protect middleware adds req.user. If not protected (public profile?), req.user might be missing.
         // user.routes.js says router.use(protect), so req.user should be there.
@@ -586,7 +589,7 @@ exports.getUserByUsername = async (req, res) => {
 
             if (!hasAccess && photos.length > 1) {
                  photos = photos.map((photo, index) => {
-                    if (index === 0) return photo; // 1st always visible
+                    if (index === 0) return photo; // 1st always visible (now guaranteed to be profile photo)
                     return {
                         _id: photo._id,
                         restricted: true,
